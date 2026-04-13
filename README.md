@@ -76,11 +76,6 @@ bidding-rag-system/
 - 安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - 确保 Docker 服务已启动。
 
-### 1.1 国内网络说明
-本项目的 Docker 镜像默认使用 `docker.m.daocloud.io` 作为镜像加速前缀，以降低在国内网络环境下拉取 `python/node/nginx` 等基础镜像失败的概率。
-如您的网络可稳定访问 Docker Hub，可将 `docker-compose*.yml` 中的 `docker.m.daocloud.io/` 前缀移除后再构建。
-如果遇到 `403 Forbidden`（常见于 `quay.io/*` 命名空间镜像），本项目已避免使用 `quay.io/coreos/etcd`，改用 `bitnami/etcd` 以提升可用性。
-
 ### 2. 一键拉起全栈开发环境
 
 在项目根目录下执行开发专用 Compose 文件：

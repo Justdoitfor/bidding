@@ -28,7 +28,7 @@ services:
       - backend
 
   mysql:
-    image: docker.m.daocloud.io/library/mysql:8.0
+    image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: bidding_db
@@ -40,7 +40,7 @@ services:
       - bidding-net
 
   redis:
-    image: docker.m.daocloud.io/library/redis:7-alpine
+    image: redis:7-alpine
     ports:
       - "6379:6379"
     volumes:
@@ -51,7 +51,7 @@ services:
   # For Milvus, it is recommended to use their official compose or standalone installation.
   # This is a simplified standalone milvus definition.
   milvus:
-    image: docker.m.daocloud.io/milvusdb/milvus:v2.4.10
+    image: milvusdb/milvus:v2.4.10
     command: ["milvus", "run", "standalone"]
     environment:
       ETCD_ENDPOINTS: etcd:2379
@@ -66,18 +66,20 @@ services:
       - minio
 
   etcd:
-    image: docker.m.daocloud.io/bitnami/etcd:3.5.5
+    image: quay.io/coreos/etcd:v3.5.5
     environment:
-      - ALLOW_NONE_AUTHENTICATION=yes
-      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
-      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
     volumes:
-      - etcd-data:/bitnami/etcd
+      - etcd-data:/etcd
     networks:
       - bidding-net
 
   minio:
-    image: docker.m.daocloud.io/minio/minio:RELEASE.2023-03-20T20-16-18Z
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
     environment:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
