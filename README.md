@@ -4,7 +4,8 @@
 
 ## 🌟 核心功能特性
 
-- **智能意图识别**：自动分析用户提问，路由至对应的专业 Agent（招标、企业、政策、价格）。
+- **智能问答界面 (Demo)**：包含前端对话系统，支持企业、招标、中标等数据的问答交互。
+- **后台管理系统 (Demo)**：支持查看用户问答历史记录，以及直接在前端上传CSV文件更新知识库。
 - **多模态文档解析**：支持 HTML、PDF、扫描件/图片的自动化解析与信息抽取。
 - **混合检索增强**：结合 Milvus 的向量语义检索与 MySQL 的结构化条件过滤，提供高精度查询结果。
 - **多模型支持**：无缝对接 Qwen（本地 vLLM 或 API）及讯飞星火（API）。
@@ -30,7 +31,7 @@
 - 编排框架：LangChain / LlamaIndex
 - 向量数据库：Milvus (PyMilvus)
 - Embedding 模型：BGE-M3 (BAAI/bge-m3)
-- 关系型数据库：MySQL 8.0
+- 关系型数据库：MySQL 8.0 (Demo模式默认使用 SQLite 以便快速启动)
 - 缓存与消息：Redis
 
 ### 部署与运维 (DevOps)
@@ -42,6 +43,9 @@
 
 ```text
 bidding-rag-system/
+├── data/               # 数据库设计文档及示例数据
+│   ├── 数据库文档.md    # 数据表设计规范
+│   └── sample_company.csv # 示例导入数据
 ├── frontend/           # Vue 3 前端工程目录
 │   ├── src/            # 前端源码 (api, components, views, store 等)
 │   ├── package.json    # npm 依赖配置
@@ -54,7 +58,7 @@ bidding-rag-system/
 │   │   ├── rag/        # RAG 核心组件 (Loader, Splitter, VectorStore)
 │   │   └── services/   # 业务逻辑服务
 │   ├── pyproject.toml  # uv 依赖管理配置文件
-│   ├── uv.lock         # 锁定的依赖版本
+│   ├── init_db.py      # 数据库初始化脚本
 │   └── Dockerfile      # 后端运行镜像
 ├── docs/               # 项目文档与设计规范
 │   └── architecture.md # 架构设计与开发规范详情
@@ -64,48 +68,35 @@ bidding-rag-system/
 
 ---
 
-## 🚀 快速启动指南
+## 🚀 快速启动指南 (Demo 版本)
 
 ### 1. 环境准备
-- 安装 Docker 及 Docker Compose
-- （可选）安装 Node.js 18+ (用于前端本地开发)
-- （可选）安装 `uv` (用于后端本地开发): `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- 安装 Node.js 18+ (用于前端本地开发)
+- 安装 `uv` (用于后端本地开发): `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
-### 2. 启动基础服务 (MySQL, Redis, Milvus)
-
-在项目根目录下运行：
-
-```bash
-docker-compose up -d mysql redis milvus etcd minio
-```
-
-### 3. 本地运行后端服务
+### 2. 启动后端服务 (FastAPI)
 
 ```bash
 cd backend
-# 使用 uv 同步依赖并启动服务
+# 安装依赖
 uv sync
+# 初始化数据库 (自动生成本地 SQLite)
+uv run python init_db.py
+# 启动服务
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 后端服务启动后，可访问 `http://localhost:8000/docs` 查看 Swagger API 文档。
 
-### 4. 本地运行前端服务
+### 3. 启动前端服务 (Vue 3)
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-前端服务启动后，默认可通过 `http://localhost:5173` 访问页面。
-
-### 5. 一键容器化部署 (全栈)
-
-```bash
-docker-compose up -d --build
-```
-启动后：
-- 前端页面：`http://localhost:3000`
-- 后端 API：`http://localhost:8000`
+前端服务启动后，访问 `http://localhost:5173`：
+- **首页**：进入智能问答界面进行交互。
+- **后台管理**：可以查看问答历史记录，或上传 `data/sample_company.csv` 进行系统数据入库。
 
 ---
 
@@ -114,8 +105,4 @@ docker-compose up -d --build
 1. **分支管理**：基于 `develop` 分支检出 `feature/xxx` 进行功能开发。
 2. **依赖管理**：后端**必须**使用 `uv add <package>` 添加依赖，禁止直接使用 `pip`。前端使用 `npm install`。
 3. **接口契约**：前后端联调需以 FastAPI 生成的 Swagger 文档为准。
-4. **文档阅读**：详细的系统架构与数据组织策略请参考 [docs/architecture.md](./docs/architecture.md)。
-
----
-
-*本项目为团队协作项目基座，后续将在此基础上逐步完善多路数据解析清洗、Agent 路由逻辑及 RAG 检索链路。*
+4. **文档阅读**：详细的系统架构与数据组织策略请参考 `docs/architecture.md` 及 `data/数据库文档.md`。
