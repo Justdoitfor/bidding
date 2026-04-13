@@ -1,308 +1,253 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import request from '../api/request'
-import { useRouter } from 'vue-router'
 
-const router = useRouter()
-const historyData = ref([])
+const historyData = ref<any[]>([])
+const dialogVisible = ref(false)
+const currentMessages = ref<any[]>([])
+const selectedSessionTitle = ref('')
 
-// Fetch History
+// Filters
+const searchUser = ref('')
+
 const fetchAllHistory = async () => {
   try {
     const res: any = await request.get('/chat/admin/history')
-    historyData.value = res.map((session: any) => {
-      return {
-        session_id: session.session_id,
-        user_id: session.user_id,
-        title: session.title,
-        created_at: session.created_at,
-        msgCount: session.messages.length
-      }
-    })
+    historyData.value = res.map((session: any) => ({
+      session_id: session.session_id,
+      user_id: session.user_id,
+      title: session.title,
+      created_at: session.created_at,
+      messages: session.messages,
+      msgCount: session.messages?.length || 0
+    }))
   } catch (error) {
-    console.error('Failed to load history', error)
+    console.error('获取历史记录失败', error)
   }
 }
 
 onMounted(() => {
   fetchAllHistory()
 })
+
+const filteredData = computed(() => {
+  if (!searchUser.value) return historyData.value
+  return historyData.value.filter(item => 
+    item.user_id.toLowerCase().includes(searchUser.value.toLowerCase())
+  )
+})
+
+const viewSession = (row: any) => {
+  selectedSessionTitle.value = row.title || '会话详情'
+  currentMessages.value = row.messages || []
+  dialogVisible.value = true
+}
+
+const formatDate = (dateStr: string) => {
+  const d = new Date(dateStr)
+  return d.toLocaleString('zh-CN', { 
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  })
+}
 </script>
 
 <template>
   <div class="admin-layout">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-content">
-        <div class="logo-area" @click="router.push('/')" style="cursor: pointer;">
-          <svg class="llama-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-            <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
-          </svg>
-          <h1 class="brand-name">招标智脑 - 管理中心</h1>
-        </div>
-        <nav class="nav-links">
-          <a href="#" class="nav-link">系统设置</a>
-          <button class="nav-pill" @click="router.push('/')">返回问答</button>
-        </nav>
-      </div>
+    <header class="admin-header">
+      <h1>招标智脑 - 会话管理后台</h1>
     </header>
 
-    <!-- Main Admin Area -->
-    <main class="main-container">
-      <div class="admin-content">
-        
-        <div class="section-header">
-          <h2 class="section-title">问答历史记录</h2>
-          <button class="action-pill" @click="fetchAllHistory">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="23 4 23 10 17 10"></polyline>
-              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-            </svg>
-            刷新数据
-          </button>
+    <main class="admin-main">
+      <div class="admin-container">
+        <div class="toolbar">
+          <el-input 
+            v-model="searchUser" 
+            placeholder="按用户ID过滤..." 
+            class="search-input"
+            clearable
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+          <el-button type="primary" @click="fetchAllHistory">
+            <el-icon><Refresh /></el-icon> 刷新数据
+          </el-button>
         </div>
 
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>会话 ID</th>
-                <th>用户 ID</th>
-                <th>提问主题</th>
-                <th>创建时间</th>
-                <th>消息数</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in historyData" :key="row.session_id">
-                <td class="cell-mono">{{ row.session_id.substring(0, 8) }}...</td>
-                <td>{{ row.user_id }}</td>
-                <td class="cell-primary">{{ row.title }}</td>
-                <td class="cell-muted">{{ new Date(row.created_at).toLocaleString() }}</td>
-                <td>
-                  <span class="badge">{{ row.msgCount }}</span>
-                </td>
-              </tr>
-              <tr v-if="historyData.length === 0">
-                <td colspan="5" class="empty-row">暂无历史问答记录</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
+        <el-table :data="filteredData" border style="width: 100%" class="history-table">
+          <el-table-column prop="session_id" label="会话 ID" width="300">
+            <template #default="{ row }">
+              <span class="mono-text">{{ row.session_id }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="user_id" label="用户 ID" width="180">
+            <template #default="{ row }">
+              <el-tag size="small" type="info">{{ row.user_id }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="title" label="提问主题" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="created_at" label="创建时间" width="180">
+            <template #default="{ row }">
+              {{ formatDate(row.created_at) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="msgCount" label="消息数" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag type="success" round>{{ row.msgCount }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" align="center" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="viewSession(row)">
+                查看详情
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
     </main>
+
+    <!-- Session Detail Dialog -->
+    <el-dialog v-model="dialogVisible" :title="selectedSessionTitle" width="800px" destroy-on-close>
+      <div class="dialog-messages">
+        <div v-for="(msg, idx) in currentMessages" :key="idx" :class="['dialog-msg', msg.role]">
+          <div class="msg-header">
+            <span class="role-badge">{{ msg.role === 'assistant' ? 'AI' : '用户' }}</span>
+            <span class="time">{{ formatDate(msg.time) }}</span>
+          </div>
+          <div class="msg-content">{{ msg.content }}</div>
+        </div>
+        <div v-if="currentMessages.length === 0" class="no-messages">
+          暂无消息内容
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
-/* 
-  Ollama-inspired Radical Minimalism 
-  Binary radius: 12px (containers) / 9999px (interactive)
-  Zero shadows. Grayscale only. 
-*/
-
-@font-face {
-  font-family: 'SF Pro Rounded';
-  src: local('SF Pro Rounded'), local('-apple-system');
-  font-weight: 400 600;
-}
-
 .admin-layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background-color: #fafafa; /* Slight off-white for admin background */
-  color: #000000;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-
-/* --- Header --- */
-.header {
-  padding: 20px 32px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e5e5;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1280px;
-  margin: 0 auto;
+  height: 100vh;
   width: 100%;
-}
-
-.logo-area {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.llama-icon {
-  width: 28px;
-  height: 28px;
-  color: #000000;
-}
-
-.brand-name {
-  font-family: 'SF Pro Rounded', ui-sans-serif, system-ui, sans-serif;
-  font-size: 20px;
-  font-weight: 500;
-  margin: 0;
-  letter-spacing: -0.02em;
-}
-
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.nav-link {
-  color: #737373;
-  text-decoration: none;
-  font-size: 16px;
-  font-weight: 400;
-}
-
-.nav-link:hover {
-  color: #000000;
-}
-
-.nav-pill {
-  background-color: #ffffff;
-  color: #000000;
-  border: 1px solid #e5e5e5;
-  border-radius: 9999px;
-  padding: 8px 20px;
-  font-size: 16px;
-  font-weight: 400;
-  cursor: pointer;
-}
-
-.nav-pill:hover {
-  background-color: #f5f5f5;
-}
-
-/* --- Main Area --- */
-.main-container {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  padding: 48px 32px;
-}
-
-.admin-content {
-  width: 100%;
-  max-width: 1280px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-}
-
-.section-title {
-  font-family: 'SF Pro Rounded', ui-sans-serif, system-ui, sans-serif;
-  font-size: 30px;
-  font-weight: 500;
-  margin: 0;
-  color: #000000;
-  letter-spacing: -0.02em;
-}
-
-.action-pill {
-  background-color: #ffffff;
-  color: #000000;
-  border: 1px solid #e5e5e5;
-  border-radius: 9999px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.action-pill:hover {
-  background-color: #f5f5f5;
-}
-
-/* --- Table Styles --- */
-.table-container {
-  background-color: #ffffff;
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
+  background-color: #f3f4f6;
   overflow: hidden;
 }
 
-.data-table {
+.admin-header {
+  background-color: #ffffff;
+  padding: 0 32px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+}
+
+.admin-header h1 {
+  font-size: 20px;
+  color: #111827;
+  margin: 0;
+  font-weight: 600;
+}
+
+.admin-main {
+  flex: 1;
+  padding: 32px;
+  display: flex;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+.admin-container {
   width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+  max-width: 1400px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: fit-content;
 }
 
-.data-table th {
-  background-color: #fafafa;
-  color: #737373;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 16px 24px;
-  border-bottom: 1px solid #e5e5e5;
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.data-table td {
-  padding: 16px 24px;
-  border-bottom: 1px solid #e5e5e5;
-  font-size: 14px;
-  color: #262626;
+.search-input {
+  width: 300px;
 }
 
-.data-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.data-table tbody tr:hover {
-  background-color: #fafafa;
-}
-
-.cell-mono {
+.mono-text {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #737373;
+  color: #6b7280;
+  font-size: 13px;
 }
 
-.cell-primary {
-  font-weight: 500;
-  color: #000000;
+/* Dialog Styles */
+.dialog-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 12px;
+  background-color: #f9fafb;
+  border-radius: 8px;
 }
 
-.cell-muted {
-  color: #a3a3a3;
+.dialog-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 8px;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
 }
 
-.badge {
-  display: inline-block;
-  padding: 2px 10px;
-  background-color: #f5f5f5;
-  border: 1px solid #e5e5e5;
-  border-radius: 9999px;
+.dialog-msg.user {
+  border-left: 4px solid #3b82f6;
+}
+
+.dialog-msg.assistant {
+  border-left: 4px solid #10b981;
+}
+
+.msg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.role-badge {
   font-size: 12px;
-  font-weight: 500;
-  color: #525252;
+  font-weight: bold;
+  color: #374151;
 }
 
-.empty-row {
+.time {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.msg-content {
+  font-size: 14px;
+  color: #1f2937;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.no-messages {
   text-align: center;
-  padding: 48px !important;
-  color: #a3a3a3 !important;
+  color: #9ca3af;
+  padding: 32px;
 }
 </style>
