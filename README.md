@@ -68,35 +68,42 @@ bidding-rag-system/
 
 ---
 
-## 🚀 快速启动指南 (Demo 版本)
+## 🚀 快速启动指南 (Docker 开发模式)
+
+由于本地环境配置可能因系统而异（特别是前端原生依赖构建问题），本项目**强烈推荐使用纯 Docker 方式**进行日常开发与调试，真正做到开箱即用。
 
 ### 1. 环境准备
-- 安装 Node.js 18+ (用于前端本地开发)
-- 安装 `uv` (用于后端本地开发): `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- 安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- 确保 Docker 服务已启动。
 
-### 2. 启动后端服务 (FastAPI)
+### 2. 一键拉起全栈开发环境
 
-```bash
-cd backend
-# 安装依赖
-uv sync
-# 初始化数据库 (自动生成本地 SQLite)
-uv run python init_db.py
-# 启动服务
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-后端服务启动后，可访问 `http://localhost:8000/docs` 查看 Swagger API 文档。
-
-### 3. 启动前端服务 (Vue 3)
+在项目根目录下执行开发专用 Compose 文件：
 
 ```bash
-cd frontend
-npm install
-npm run dev
+docker-compose -f docker-compose.dev.yml up -d --build
 ```
-前端服务启动后，访问 `http://localhost:5173`：
-- **首页**：进入智能问答界面进行交互。
-- **后台管理**：可以查看问答历史记录，或上传 `data/sample_company.csv` 进行系统数据入库。
+
+> **注意：** 该模式下，前端使用了 `Dockerfile.dev` 启动 Vite 热更新（HMR），且通过数据卷（Volumes）将宿主机代码实时映射到了容器内。
+> 当您在本地 IDE（如 PyCharm/VSCode）修改代码后，容器内的后端（FastAPI Reload）和前端（Vite HMR）都会**自动热更新**。
+
+### 3. 服务访问与使用
+启动完成后，您可以通过以下地址访问：
+- **前端问答与后台管理界面**：`http://localhost:5173`
+- **后端 Swagger API 接口文档**：`http://localhost:8000/docs`
+
+> 此时您可以在本地随意修改 `frontend/` 和 `backend/` 下的源码，保存后浏览器即可实时看到变化，无需在本地安装任何 `node_modules` 或配置 Python 虚拟环境。
+
+---
+
+## 🚀 生产环境部署 (Docker 生产模式)
+
+当需要将系统打包发布到线上服务器时，请使用默认的 `docker-compose.yml`，该模式会对前端进行 Nginx 静态资源打包构建。
+
+```bash
+docker-compose up -d --build
+```
+启动后前端生产地址为：`http://localhost:3000`
 
 ---
 
