@@ -39,11 +39,11 @@ onMounted(() => {
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
             <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
           </svg>
-          <h1 class="brand-name">Bidding Admin</h1>
+          <h1 class="brand-name">招标智脑 - 管理中心</h1>
         </div>
         <nav class="nav-links">
-          <a href="#" class="nav-link">Settings</a>
-          <button class="nav-pill" @click="router.push('/')">Back to Chat</button>
+          <a href="#" class="nav-link">系统设置</a>
+          <button class="nav-pill" @click="router.push('/')">返回问答</button>
         </nav>
       </div>
     </header>
@@ -53,13 +53,13 @@ onMounted(() => {
       <div class="admin-content">
         
         <div class="section-header">
-          <h2 class="section-title">Query History</h2>
+          <h2 class="section-title">问答历史记录</h2>
           <button class="action-pill" @click="fetchAllHistory">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="23 4 23 10 17 10"></polyline>
               <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
             </svg>
-            Refresh
+            刷新数据
           </button>
         </div>
 
@@ -67,11 +67,11 @@ onMounted(() => {
           <table class="data-table">
             <thead>
               <tr>
-                <th>Session ID</th>
-                <th>User ID</th>
-                <th>Query Topic</th>
-                <th>Created At</th>
-                <th>Messages</th>
+                <th>会话 ID</th>
+                <th>用户 ID</th>
+                <th>提问主题</th>
+                <th>创建时间</th>
+                <th>消息数</th>
               </tr>
             </thead>
             <tbody>
@@ -85,7 +85,7 @@ onMounted(() => {
                 </td>
               </tr>
               <tr v-if="historyData.length === 0">
-                <td colspan="5" class="empty-row">No history records found.</td>
+                <td colspan="5" class="empty-row">暂无历史问答记录</td>
               </tr>
             </tbody>
           </table>

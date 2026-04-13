@@ -74,12 +74,11 @@ const sendMessage = async () => {
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
             <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
           </svg>
-          <h1 class="brand-name">Bidding</h1>
+          <h1 class="brand-name">招标智脑</h1>
         </div>
         <nav class="nav-links">
-          <a href="#" class="nav-link">Docs</a>
-          <a href="#" class="nav-link">Models</a>
-          <button class="nav-pill" @click="router.push('/admin')">Admin</button>
+          <a href="#" class="nav-link">文档</a>
+          <a href="#" class="nav-link">模型</a>
         </nav>
       </div>
     </header>
@@ -96,18 +95,18 @@ const sendMessage = async () => {
               <circle cx="12" cy="12" r="4"/>
             </svg>
           </div>
-          <h2 class="hero-title">Get started with Bidding RAG</h2>
-          <p class="hero-subtitle">Ask questions about enterprise info, regulations, bidding data, and prices.</p>
+          <h2 class="hero-title">开始使用 招标智脑 RAG</h2>
+          <p class="hero-subtitle">您可以提问关于企业信息、政策法规、招标数据及商品价格等任何问题。</p>
           
           <div class="suggestion-grid">
             <button class="suggestion-pill" @click="query = '查询北京科技有限公司的工商信息'; sendMessage()">
-              Query Company Info
+              查询企业信息
             </button>
             <button class="suggestion-pill" @click="query = '最近有哪些高性能服务器的招标项目？'; sendMessage()">
-              Find Bidding Projects
+              查找招标项目
             </button>
             <button class="suggestion-pill" @click="query = '中华人民共和国招标投标法的核心内容是什么？'; sendMessage()">
-              Search Regulations
+              检索政策法规
             </button>
           </div>
         </div>
@@ -145,7 +144,7 @@ const sendMessage = async () => {
               type="text" 
               class="chat-input" 
               v-model="query" 
-              placeholder="Message Bidding RAG..." 
+              placeholder="向 招标智脑 提问..." 
               @keyup.enter="sendMessage"
               :disabled="loading"
             />
@@ -156,7 +155,7 @@ const sendMessage = async () => {
               </svg>
             </button>
           </div>
-          <div class="input-footer">Bidding RAG can make mistakes. Consider verifying important information.</div>
+          <div class="input-footer">招标智脑 可能会产生误差。请考虑验证重要信息。</div>
         </div>
 
       </div>
