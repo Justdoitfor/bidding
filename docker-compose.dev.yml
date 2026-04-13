@@ -7,6 +7,8 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      # Map .venv to an anonymous volume to bypass Windows NTFS symlink restrictions
+      - backend-venv:/app/.venv
     environment:
       - MYSQL_HOST=mysql
       - REDIS_URL=redis://redis:6379/0
@@ -103,6 +105,7 @@ volumes:
   etcd-data:
   minio-data:
   frontend-node-modules:
+  backend-venv:
 
 networks:
   bidding-net:
