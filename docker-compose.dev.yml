@@ -42,7 +42,7 @@ services:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: bidding_db
     ports:
-      - "3306:3306"
+      - "33060:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
