@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Optional, List
 from sqlalchemy.orm import Session
 import uuid
 from datetime import datetime
 
+from app.api.deps import get_current_admin, get_current_user
 from app.models.database import get_db
-from app.models.domain import ChatSession, ChatMessage, Company, Zhaobiao
+from app.models.domain import ChatSession, ChatMessage, Company, Zhaobiao, User
 
 router = APIRouter()
 
@@ -21,12 +22,12 @@ class ChatResponse(BaseModel):
     sources: list
 
 @router.post("/", response_model=ChatResponse)
-async def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
+async def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     session_id = request.session_id
     if not session_id:
         session_id = str(uuid.uuid4())
         # Create new session
-        new_session = ChatSession(id=session_id, user_id="demo_user", title=request.query[:20])
+        new_session = ChatSession(id=session_id, user_id=current_user.id, title=request.query[:20])
         db.add(new_session)
         db.commit()
 
@@ -58,8 +59,8 @@ async def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db)):
     )
 
 @router.get("/history")
-async def get_history(user_id: str = "demo_user", db: Session = Depends(get_db)):
-    sessions = db.query(ChatSession).filter(ChatSession.user_id == user_id).order_by(ChatSession.created_at.desc()).all()
+async def get_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    sessions = db.query(ChatSession).filter(ChatSession.user_id == current_user.id).order_by(ChatSession.created_at.desc()).all()
     res = []
     for s in sessions:
         msgs = db.query(ChatMessage).filter(ChatMessage.session_id == s.id).order_by(ChatMessage.created_at.asc()).all()
@@ -72,15 +73,22 @@ async def get_history(user_id: str = "demo_user", db: Session = Depends(get_db))
     return res
 
 @router.get("/admin/history")
-async def get_all_history(db: Session = Depends(get_db)):
+async def get_all_history(user_id: str | None = None, db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
     # For admin dashboard
-    sessions = db.query(ChatSession).order_by(ChatSession.created_at.desc()).all()
+    q = db.query(ChatSession)
+    if user_id:
+        q = q.filter(ChatSession.user_id == user_id)
+    sessions = q.order_by(ChatSession.created_at.desc()).all()
+    user_ids = list({s.user_id for s in sessions})
+    users = db.query(User).filter(User.id.in_(user_ids)).all() if user_ids else []
+    user_map = {u.id: u.username for u in users}
     res = []
     for s in sessions:
         msgs = db.query(ChatMessage).filter(ChatMessage.session_id == s.id).order_by(ChatMessage.created_at.asc()).all()
         res.append({
             "session_id": s.id,
             "user_id": s.user_id,
+            "username": user_map.get(s.user_id, ""),
             "title": s.title,
             "created_at": s.created_at,
             "messages": [{"role": m.role, "content": m.content, "time": m.created_at} for m in msgs]

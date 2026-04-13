@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routers import chat, document
+from app.api.routers import chat, document, auth, users
 from app.core.config import settings
 
 app = FastAPI(
-    title="Bidding RAG System API",
-    description="Smart QA System for Bidding, Enterprise, Policy, and Price info",
+    title="招投标信息智能问答平台 API",
+    description="招投标、企业、政策法规与价格信息的检索增强智能问答系统",
     version="1.0.0"
 )
 
@@ -21,6 +21,8 @@ app.add_middleware(
 # Include routers
 app.include_router(chat, prefix="/api/v1/chat", tags=["Chat"])
 app.include_router(document, prefix="/api/v1/documents", tags=["Documents"])
+app.include_router(auth, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(users, prefix="/api/v1/users", tags=["Users"])
 
 @app.get("/")
 async def root():

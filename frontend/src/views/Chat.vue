@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import request from '../api/request'
+import BrandMark from '../components/BrandMark.vue'
 
 const query = ref('')
 const messages = ref<{role: string, content: string}[]>([])
@@ -11,7 +12,7 @@ const scrollContainer = ref<HTMLElement | null>(null)
 
 const fetchHistory = async () => {
   try {
-    const res: any = await request.get('/chat/history?user_id=demo_user')
+    const res: any = await request.get('/chat/history')
     sessions.value = res || []
   } catch (error) {
     console.error('获取历史记录失败', error)
@@ -25,6 +26,12 @@ onMounted(() => {
 const startNewChat = () => {
   sessionId.value = null
   messages.value = []
+}
+
+const logout = () => {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('current_user')
+  window.location.href = '/login'
 }
 
 const selectSession = (session: any) => {
@@ -78,11 +85,8 @@ const sendMessage = async () => {
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="logo-area">
-          <svg class="llama-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-            <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
-          </svg>
-          <h1 class="brand-name">招标智脑</h1>
+          <BrandMark :size="24" class="llama-icon" />
+          <h1 class="brand-name">招投标信息智能问答平台</h1>
         </div>
         <button class="new-chat-btn" @click="startNewChat">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -103,6 +107,9 @@ const sendMessage = async () => {
           暂无历史会话
         </div>
       </div>
+      <div class="sidebar-footer">
+        <button class="logout-btn" @click="logout">退出登录</button>
+      </div>
     </aside>
 
     <!-- Main Chat Area -->
@@ -111,12 +118,9 @@ const sendMessage = async () => {
         <!-- Empty State -->
         <div v-if="messages.length === 0" class="empty-state">
           <div class="empty-llama">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-              <circle cx="12" cy="12" r="4"/>
-            </svg>
+            <BrandMark :size="64" />
           </div>
-          <h2 class="hero-title">开始使用 招标智脑 RAG</h2>
+          <h2 class="hero-title">开始使用招投标信息智能问答平台</h2>
           <p class="hero-subtitle">您可以提问关于企业信息、政策法规、招标数据及商品价格等任何问题。</p>
           
           <div class="suggestion-grid">
@@ -136,10 +140,7 @@ const sendMessage = async () => {
         <div v-else class="message-wrapper-container">
           <div v-for="(msg, index) in messages" :key="index" :class="['message-wrapper', msg.role]">
             <div class="message-avatar" v-if="msg.role === 'assistant'">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <circle cx="12" cy="12" r="4"/>
-              </svg>
+              <BrandMark :size="24" />
             </div>
             <div class="message-content">
               {{ msg.content }}
@@ -147,10 +148,7 @@ const sendMessage = async () => {
           </div>
           <div v-if="loading" class="message-wrapper assistant">
             <div class="message-avatar">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <circle cx="12" cy="12" r="4"/>
-              </svg>
+              <BrandMark :size="24" />
             </div>
             <div class="message-content loading-indicator">
               <span>.</span><span>.</span><span>.</span>
@@ -166,7 +164,7 @@ const sendMessage = async () => {
             type="text" 
             class="chat-input" 
             v-model="query" 
-            placeholder="向 招标智脑 提问..." 
+            placeholder="请输入问题…" 
             @keyup.enter="sendMessage"
             :disabled="loading"
           />
@@ -177,7 +175,7 @@ const sendMessage = async () => {
             </svg>
           </button>
         </div>
-        <div class="input-footer">招标智脑 可能会产生误差。请考虑验证重要信息。</div>
+        <div class="input-footer">系统可能会产生误差，请验证重要信息。</div>
       </div>
     </main>
   </div>
@@ -271,6 +269,29 @@ const sendMessage = async () => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.sidebar-footer {
+  padding: 16px 20px 20px;
+  border-top: 1px solid #e5e5e5;
+}
+
+.logout-btn {
+  width: 100%;
+  background-color: #ffffff;
+  color: #404040;
+  border: 1px solid #d4d4d4;
+  border-radius: 9999px;
+  padding: 10px 24px;
+  font-size: 16px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.logout-btn:hover {
+  background-color: #e5e5e5;
+  color: #000000;
+  border-color: #e5e5e5;
 }
 
 .history-label {

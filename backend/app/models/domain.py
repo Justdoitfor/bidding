@@ -1,6 +1,15 @@
-from sqlalchemy import Column, String, Text, DECIMAL, JSON, Integer, DateTime
+from sqlalchemy import Column, String, Text, DECIMAL, JSON, Integer, DateTime, Boolean
 from app.models.database import Base
 from datetime import datetime
+
+class User(Base):
+    __tablename__ = "user"
+    id = Column(String(50), primary_key=True, index=True)
+    username = Column(String(50), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    is_admin = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class Company(Base):
     __tablename__ = "mysql_company"

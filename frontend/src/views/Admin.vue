@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import request from '../api/request'
+import BrandMark from '../components/BrandMark.vue'
 
 const historyData = ref<any[]>([])
 const dialogVisible = ref(false)
@@ -16,6 +17,7 @@ const fetchAllHistory = async () => {
     historyData.value = res.map((session: any) => ({
       session_id: session.session_id,
       user_id: session.user_id,
+      username: session.username,
       title: session.title,
       created_at: session.created_at,
       messages: session.messages,
@@ -32,9 +34,11 @@ onMounted(() => {
 
 const filteredData = computed(() => {
   if (!searchUser.value) return historyData.value
-  return historyData.value.filter(item => 
-    item.user_id.toLowerCase().includes(searchUser.value.toLowerCase())
-  )
+  const q = searchUser.value.toLowerCase()
+  return historyData.value.filter(item => {
+    const key = (item.username || item.user_id || '').toLowerCase()
+    return key.includes(q)
+  })
 })
 
 const viewSession = (row: any) => {
@@ -45,6 +49,12 @@ const viewSession = (row: any) => {
 
 const closeDialog = () => {
   dialogVisible.value = false
+}
+
+const logout = () => {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('current_user')
+  window.location.href = '/admin/login'
 }
 
 const formatDate = (dateStr: string) => {
@@ -61,12 +71,10 @@ const formatDate = (dateStr: string) => {
     <header class="admin-header">
       <div class="header-content">
         <div class="logo-area">
-          <svg class="llama-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-            <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
-          </svg>
-          <h1 class="brand-name">招标智脑 - 管理中心</h1>
+          <BrandMark :size="28" class="llama-icon" />
+          <h1 class="brand-name">招投标信息智能问答平台 - 管理中心</h1>
         </div>
+        <button class="action-pill" @click="logout">退出登录</button>
       </div>
     </header>
 
@@ -111,7 +119,7 @@ const formatDate = (dateStr: string) => {
             <tbody>
               <tr v-for="row in filteredData" :key="row.session_id">
                 <td class="cell-mono">{{ row.session_id.substring(0, 8) }}...</td>
-                <td><span class="tag-pill">{{ row.user_id }}</span></td>
+                <td><span class="tag-pill">{{ row.username || row.user_id }}</span></td>
                 <td class="cell-primary">{{ row.title }}</td>
                 <td class="cell-muted">{{ formatDate(row.created_at) }}</td>
                 <td>
@@ -187,6 +195,7 @@ const formatDate = (dateStr: string) => {
 .header-content {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   max-width: 1280px;
   margin: 0 auto;
   width: 100%;
