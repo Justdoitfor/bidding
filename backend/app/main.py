@@ -19,8 +19,8 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(chat.router, prefix="/api/v1/chat", tags=["Chat"])
-app.include_router(document.router, prefix="/api/v1/documents", tags=["Documents"])
+app.include_router(chat, prefix="/api/v1/chat", tags=["Chat"])
+app.include_router(document, prefix="/api/v1/documents", tags=["Documents"])
 
 @app.get("/")
 async def root():
