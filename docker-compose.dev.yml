@@ -3,6 +3,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        PYTHON_IMAGE: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/python:3.11-slim
     ports:
       - "8000:8000"
     volumes:
@@ -29,6 +31,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
+      args:
+        NODE_IMAGE: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/node:22-alpine
     ports:
       - "5173:5173"
     volumes:
@@ -43,7 +47,7 @@ services:
       - backend
 
   mysql:
-    image: mysql:8.0
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: bidding_db
@@ -57,7 +61,7 @@ services:
       - bidding-net
 
   redis:
-    image: redis:7-alpine
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/redis:7-alpine
     ports:
       - "6379:6379"
     volumes:
@@ -66,7 +70,7 @@ services:
       - bidding-net
 
   milvus:
-    image: milvusdb/milvus:v2.4.10
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/milvusdb/milvus:v2.4.10
     command: ["milvus", "run", "standalone"]
     environment:
       ETCD_ENDPOINTS: etcd:2379
@@ -81,7 +85,7 @@ services:
       - minio
 
   etcd:
-    image: quay.io/coreos/etcd:v3.5.5
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/quay.io/coreos/etcd:v3.5.5
     environment:
       - ETCD_AUTO_COMPACTION_MODE=revision
       - ETCD_AUTO_COMPACTION_RETENTION=1000
@@ -94,7 +98,7 @@ services:
       - bidding-net
 
   minio:
-    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/minio/minio:RELEASE.2023-03-20T20-16-18Z
     environment:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
