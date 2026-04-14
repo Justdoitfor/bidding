@@ -42,3 +42,24 @@ def update_user(user_id: str, req: UpdateUserRequest, _: User = Depends(get_curr
     db.refresh(user)
     return UserItem(id=user.id, username=user.username, is_admin=user.is_admin, is_active=user.is_active)
 
+
+@router.delete("/{user_id}")
+def delete_user(user_id: str, current_admin: User = Depends(get_current_admin), db: Session = Depends(get_db)):
+    if user_id == current_admin.id:
+        raise HTTPException(status_code=400, detail="不能删除自己")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    
+    # 级联删除相关的聊天记录 (简单处理)
+    from app.models.domain import ChatSession, ChatMessage
+    sessions = db.query(ChatSession).filter(ChatSession.user_id == user_id).all()
+    for session in sessions:
+        db.query(ChatMessage).filter(ChatMessage.session_id == session.id).delete()
+    db.query(ChatSession).filter(ChatSession.user_id == user_id).delete()
+    
+    db.delete(user)
+    db.commit()
+    return {"message": "用户已删除"}
+

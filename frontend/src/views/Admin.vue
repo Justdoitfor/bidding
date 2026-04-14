@@ -6,7 +6,7 @@ import BrandMark from '../components/BrandMark.vue'
 const currentUser = ref(JSON.parse(localStorage.getItem('current_user') || '{}'))
 
 // Tabs
-const activeTab = ref('sessions') // 'sessions' | 'users'
+const activeTab = ref('sessions') // 'sessions' | 'users' | 'data'
 
 // Sessions Data
 const historyData = ref<any[]>([])
@@ -42,6 +42,27 @@ const fetchUsers = async () => {
     usersData.value = res || []
   } catch (error) {
     console.error('获取用户列表失败', error)
+  }
+}
+
+const toggleUserStatus = async (user: any) => {
+  if (!confirm(`确定要${user.is_active ? '禁用' : '启用'}用户 ${user.username} 吗？`)) return
+  try {
+    await request.patch(`/users/${user.id}`, { is_active: !user.is_active })
+    fetchUsers()
+  } catch (error) {
+    console.error('更新用户状态失败', error)
+  }
+}
+
+const deleteUser = async (user: any) => {
+  if (!confirm(`确定要永久删除用户 ${user.username} 吗？此操作将同时删除其所有会话记录。`)) return
+  try {
+    await request.delete(`/users/${user.id}`)
+    fetchUsers()
+    fetchAllHistory()
+  } catch (error) {
+    console.error('删除用户失败', error)
   }
 }
 
@@ -116,8 +137,9 @@ const formatDate = (dateStr: string) => {
           <div class="tabs">
             <button :class="['tab-btn', { active: activeTab === 'sessions' }]" @click="activeTab = 'sessions'">会话记录</button>
             <button :class="['tab-btn', { active: activeTab === 'users' }]" @click="activeTab = 'users'">用户管理</button>
+            <button :class="['tab-btn', { active: activeTab === 'data' }]" @click="activeTab = 'data'">数据入库</button>
           </div>
-          <button class="action-pill" @click="activeTab === 'sessions' ? fetchAllHistory() : fetchUsers()">
+          <button v-if="activeTab !== 'data'" class="action-pill" @click="activeTab === 'sessions' ? fetchAllHistory() : fetchUsers()">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="23 4 23 10 17 10"></polyline>
               <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
@@ -181,6 +203,7 @@ const formatDate = (dateStr: string) => {
                   <th>用户名</th>
                   <th>角色</th>
                   <th>状态</th>
+                  <th style="text-align: center;">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,12 +219,53 @@ const formatDate = (dateStr: string) => {
                     <span :class="['status-dot', user.is_active ? 'active' : 'inactive']"></span>
                     {{ user.is_active ? '正常' : '禁用' }}
                   </td>
+                  <td style="text-align: center;">
+                    <div class="action-links" v-if="user.id !== currentUser.id">
+                      <button class="link-btn" @click="toggleUserStatus(user)">{{ user.is_active ? '禁用' : '启用' }}</button>
+                      <button class="link-btn danger" @click="deleteUser(user)">删除</button>
+                    </div>
+                    <span class="cell-muted" v-else>当前账号</span>
+                  </td>
                 </tr>
                 <tr v-if="filteredUsers.length === 0">
-                  <td colspan="4" class="empty-row">暂无用户记录</td>
+                  <td colspan="5" class="empty-row">暂无用户记录</td>
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Data Ingestion Tab -->
+        <div v-if="activeTab === 'data'" class="tab-content">
+          <div class="data-ingestion-panel">
+            <div class="panel-header">
+              <h3>真实数据导入</h3>
+              <p class="panel-desc">目前可通过后端提供的脚本，将企业、产品、法规等数据导入至向量库和关系库。未来将在此处支持一键拖拽上传。</p>
+            </div>
+            
+            <div class="upload-zone">
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#a3a3a3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span class="upload-text">拖拽数据文件至此处，或 <button class="link-btn">点击上传</button></span>
+              <span class="upload-hint">支持 .csv, .json, .xlsx 格式（该功能正在开发中，请使用下方终端命令导入）</span>
+            </div>
+
+            <div class="manual-instruction">
+              <div class="instruction-header">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                <h4>终端手动入库指引</h4>
+              </div>
+              <div class="code-block">
+                <div class="code-line"><span class="comment"># 1. 将数据文件放入 backend/data/ 目录</span></div>
+                <div class="code-line"><span class="comment"># 2. 进入后端容器</span></div>
+                <div class="code-line"><span class="command">docker-compose exec backend bash</span></div>
+                <div class="code-line"><span class="comment"># 3. 运行导入脚本（需根据实际数据结构开发对应的导入脚本）</span></div>
+                <div class="code-line"><span class="command">uv run python scripts/import_real_data.py --file data/your_data.csv</span></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -554,6 +618,118 @@ const formatDate = (dateStr: string) => {
   text-align: center;
   padding: 48px !important;
   color: #a3a3a3 !important;
+}
+
+.action-links {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.link-btn.danger {
+  color: #ef4444;
+}
+
+.link-btn.danger:hover {
+  color: #b91c1c;
+}
+
+/* --- Data Ingestion Panel --- */
+.data-ingestion-panel {
+  background-color: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.panel-header h3 {
+  margin: 0 0 8px 0;
+  font-family: 'SF Pro Rounded', ui-sans-serif, system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: #000000;
+}
+
+.panel-desc {
+  margin: 0;
+  font-size: 14px;
+  color: #737373;
+  line-height: 1.5;
+}
+
+.upload-zone {
+  border: 2px dashed #e5e5e5;
+  border-radius: 12px;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background-color: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.upload-zone:hover {
+  border-color: #a3a3a3;
+  background-color: #f5f5f5;
+}
+
+.upload-text {
+  font-size: 16px;
+  color: #262626;
+}
+
+.upload-text b {
+  font-weight: 500;
+}
+
+.upload-hint {
+  font-size: 14px;
+  color: #a3a3a3;
+}
+
+.manual-instruction {
+  background-color: #fafafa;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.instruction-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: #000000;
+}
+
+.instruction-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.code-block {
+  background-color: #000000;
+  border-radius: 8px;
+  padding: 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #e5e5e5;
+  overflow-x: auto;
+}
+
+.code-line .comment {
+  color: #737373;
+}
+
+.code-line .command {
+  color: #ffffff;
 }
 
 /* --- Modal Dialog with Chat Bubbles --- */
