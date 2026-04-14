@@ -21,6 +21,8 @@ def create_milvus_collections():
     if not utility.has_collection("milvus_company"):
         fields = [
             FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=100),
+            FieldSchema(name="doc_id", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="chunk_index", dtype=DataType.INT64),
             FieldSchema(name="source", dtype=DataType.VARCHAR, max_length=255),
             FieldSchema(name="core_text_for_bge_m3", dtype=DataType.VARCHAR, max_length=65535),
             FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=VECTOR_DIM)
@@ -34,6 +36,8 @@ def create_milvus_collections():
     if not utility.has_collection("milvus_law"):
         fields = [
             FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=100),
+            FieldSchema(name="doc_id", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="chunk_index", dtype=DataType.INT64),
             FieldSchema(name="source", dtype=DataType.VARCHAR, max_length=255),
             FieldSchema(name="pub_date", dtype=DataType.VARCHAR, max_length=50),
             FieldSchema(name="core_text_for_bge_m3", dtype=DataType.VARCHAR, max_length=65535),
@@ -48,6 +52,8 @@ def create_milvus_collections():
     if not utility.has_collection("milvus_product"):
         fields = [
             FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=100),
+            FieldSchema(name="doc_id", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="chunk_index", dtype=DataType.INT64),
             FieldSchema(name="source", dtype=DataType.VARCHAR, max_length=255),
             FieldSchema(name="core_text_for_bge_m3", dtype=DataType.VARCHAR, max_length=65535),
             FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=VECTOR_DIM)
@@ -61,6 +67,8 @@ def create_milvus_collections():
     if not utility.has_collection("milvus_zhaobiao"):
         fields = [
             FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=100),
+            FieldSchema(name="doc_id", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="chunk_index", dtype=DataType.INT64),
             FieldSchema(name="source", dtype=DataType.VARCHAR, max_length=255),
             FieldSchema(name="category", dtype=DataType.VARCHAR, max_length=100),
             FieldSchema(name="pub_date", dtype=DataType.VARCHAR, max_length=50),
@@ -77,6 +85,8 @@ def create_milvus_collections():
     if not utility.has_collection("milvus_zhongbiao"):
         fields = [
             FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=100),
+            FieldSchema(name="doc_id", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="chunk_index", dtype=DataType.INT64),
             FieldSchema(name="category", dtype=DataType.VARCHAR, max_length=100),
             FieldSchema(name="pub_date", dtype=DataType.VARCHAR, max_length=50),
             FieldSchema(name="purchaser", dtype=DataType.VARCHAR, max_length=255),
