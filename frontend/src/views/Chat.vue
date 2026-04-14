@@ -3,6 +3,8 @@ import { ref, onMounted, nextTick } from 'vue'
 import request from '../api/request'
 import BrandMark from '../components/BrandMark.vue'
 
+const currentUser = ref(JSON.parse(localStorage.getItem('current_user') || '{}'))
+
 const query = ref('')
 const messages = ref<{role: string, content: string}[]>([])
 const loading = ref(false)
@@ -108,6 +110,12 @@ const sendMessage = async () => {
         </div>
       </div>
       <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar-placeholder">
+            {{ (currentUser.username || 'U').charAt(0).toUpperCase() }}
+          </div>
+          <span class="user-name">{{ currentUser.username || '普通用户' }}</span>
+        </div>
         <button class="logout-btn" @click="logout">退出登录</button>
       </div>
     </aside>
@@ -274,6 +282,38 @@ const sendMessage = async () => {
 .sidebar-footer {
   padding: 16px 20px 20px;
   border-top: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  background-color: #e5e5e5;
+  color: #525252;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .logout-btn {
