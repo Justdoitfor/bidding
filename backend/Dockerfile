@@ -1,4 +1,5 @@
-ARG PYTHON_IMAGE=python:3.11-slim
+# Use a stable domestic mirror registry for Docker Hub (e.g., m.daocloud.io or docker.1panel.live)
+ARG PYTHON_IMAGE=docker.1panel.live/library/python:3.11-slim
 FROM ${PYTHON_IMAGE}
 
 WORKDIR /app
