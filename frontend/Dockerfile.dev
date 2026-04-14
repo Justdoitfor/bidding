@@ -1,5 +1,5 @@
-# Use a stable domestic mirror registry for Docker Hub
-ARG NODE_IMAGE=docker.1panel.live/library/node:22-alpine
+# Allow dynamic injection of registry mirror if needed, fallback to default Docker Hub
+ARG NODE_IMAGE=node:22-alpine
 FROM ${NODE_IMAGE}
 WORKDIR /app
 COPY package*.json ./
