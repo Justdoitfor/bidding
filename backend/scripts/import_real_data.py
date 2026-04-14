@@ -166,10 +166,10 @@ def process_milvus_file(file_path: str, table_type: str):
         logger.error(f"Failed to read {file_path}: {e}")
         return
 
-    # Initialize LangChain semantic chunker
+    # Initialize LangChain semantic chunker with better overlap and separators for Chinese
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=800,
-        chunk_overlap=100,
+        chunk_size=1000,
+        chunk_overlap=200,
         length_function=len,
         separators=["\n\n", "\n", "。", "！", "？", "；", "，", " ", ""]
     )
@@ -195,24 +195,28 @@ def process_milvus_file(file_path: str, table_type: str):
         doc_id = clean_string(row.get("id")) or str(uuid.uuid4())
         raw_text = str(row.get("core_text_for_bge_m3") or "")
         
-        # Smart extraction: isolate JSON metadata and core textual content
+        # Smart extraction: isolate JSON metadata and core textual content safely
         json_start = raw_text.rfind("{")
+        json_end = raw_text.rfind("}")
         split_marker = "附加信息："
         
-        if split_marker in raw_text and json_start != -1:
-            main_text = raw_text[:raw_text.rfind(split_marker)].strip()
-            meta_str = raw_text[json_start:]
-        elif json_start != -1:
-            main_text = raw_text[:json_start].strip()
-            meta_str = raw_text[json_start:]
-        else:
-            main_text = raw_text
-            meta_str = "{}"
-            
-        try:
-            metadata = json.loads(meta_str)
-        except Exception:
-            metadata = {}
+        metadata = {}
+        main_text = raw_text
+
+        # Only extract if it looks like a valid JSON dictionary at the end
+        if json_start != -1 and json_end != -1 and json_end > json_start:
+            meta_str = raw_text[json_start:json_end+1]
+            try:
+                metadata = json.loads(meta_str)
+                # If json loads successfully, strip it from the main text to prevent redundancy
+                if split_marker in raw_text[:json_start]:
+                    main_text = raw_text[:raw_text.rfind(split_marker)].strip()
+                else:
+                    main_text = raw_text[:json_start].strip()
+            except Exception:
+                # If it's not valid JSON, treat the whole thing as main_text to avoid data loss
+                metadata = {}
+                main_text = raw_text
 
         # Augment main text with long fields from metadata if they are missing
         if table_type == "company" and metadata.get("business_scope") and metadata.get("business_scope") not in main_text:
@@ -287,7 +291,7 @@ def process_milvus_file(file_path: str, table_type: str):
             milvus_batch.append(chunk_data)
             success_chunks += 1
             
-            if len(milvus_batch) >= 50:
+            if len(milvus_batch) >= 300:
                 flush_milvus_batch()
                 logger.info(f"Vectorized and inserted {success_chunks} chunks into Milvus...")
 
