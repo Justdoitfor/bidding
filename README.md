@@ -125,18 +125,17 @@ docker-compose -f docker-compose.dev.yml up -d
    docker-compose -f docker-compose.dev.yml up -d
    ```
 
-3. **在容器内执行导入脚本**
-   进入后端容器，并使用已经编写好的通用导入脚本 `import_real_data.py`。该脚本已适配 `数据库文档.md` 中定义的所有 5 张关系表：
+3. **在容器内一键批量导入**
+   进入后端容器，执行通用导入脚本的目录扫描模式。脚本会**自动识别文件名**（如果文件名包含 `company`, `law`, `product`, `zhaobiao`, `zhongbiao` 则自动入库到对应表）：
    ```powershell
    # 进入后端容器
    docker-compose -f docker-compose.dev.yml exec backend bash
    
-   # 执行入库脚本（请根据实际文件和数据类型替换 --type 参数）
-   # 支持的 type 有: company, law, product, zhaobiao, zhongbiao
-   uv run python scripts/import_real_data.py --file /external_data/company.csv --type company
+   # 一键扫描并导入该挂载目录下的所有匹配文件
+   uv run python scripts/import_real_data.py --dir /external_data
    ```
 
-*注：您也可以在浏览器登录**管理员后台**，进入“数据入库”面板查看相关操作指引。目前脚本支持 MySQL / SQLite 关系表入库，Milvus 向量数据入库正在开发完善中。*
+*注：您也可以在浏览器登录**管理员后台**，进入“数据入库”面板查看相关操作指引。*
 
 ---
 

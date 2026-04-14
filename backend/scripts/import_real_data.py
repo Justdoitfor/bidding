@@ -174,10 +174,48 @@ def process_file(file_path: str, table_type: str):
         db.rollback()
         logger.error(f"Error during import: {e}")
 
+def process_directory(dir_path: str):
+    if not os.path.exists(dir_path):
+        logger.error(f"Directory not found: {dir_path}")
+        return
+        
+    logger.info(f"Scanning directory: {dir_path} for data files...")
+    supported_types = ["company", "law", "product", "zhaobiao", "zhongbiao"]
+    found_files = False
+    
+    for filename in os.listdir(dir_path):
+        if filename.startswith("~") or filename.startswith("."):
+            continue
+            
+        lower_name = filename.lower()
+        matched_type = None
+        
+        for t in supported_types:
+            if t in lower_name:
+                matched_type = t
+                break
+                
+        if matched_type and (lower_name.endswith(".csv") or lower_name.endswith(".xlsx") or lower_name.endswith(".xls") or lower_name.endswith(".json")):
+            file_path = os.path.join(dir_path, filename)
+            logger.info(f"Found file '{filename}' matching type '{matched_type}'.")
+            process_file(file_path, matched_type)
+            found_files = True
+            
+    if not found_files:
+        logger.warning(f"No matching data files found in {dir_path}.")
+        logger.warning(f"Ensure filenames contain keywords like 'company', 'law', 'product', 'zhaobiao', or 'zhongbiao'.")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Import real data into MySQL/SQLite and Milvus")
-    parser.add_argument("--file", type=str, required=True, help="Absolute path to the external data file (e.g., D:/data/company.csv)")
-    parser.add_argument("--type", type=str, required=True, choices=["company", "law", "product", "zhaobiao", "zhongbiao"], help="Target table type")
+    parser.add_argument("--file", type=str, help="Absolute path to the external data file (e.g., D:/data/company.csv)")
+    parser.add_argument("--type", type=str, choices=["company", "law", "product", "zhaobiao", "zhongbiao"], help="Target table type")
+    parser.add_argument("--dir", type=str, help="Directory containing data files. Auto-matches files based on filename keywords.")
     
     args = parser.parse_args()
-    process_file(args.file, args.type)
+    
+    if args.dir:
+        process_directory(args.dir)
+    elif args.file and args.type:
+        process_file(args.file, args.type)
+    else:
+        parser.error("Either --dir must be provided, or both --file and --type must be provided.")

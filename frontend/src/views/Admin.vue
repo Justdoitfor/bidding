@@ -264,8 +264,8 @@ const formatDate = (dateStr: string) => {
                 <div class="code-line"><span class="command">docker-compose -f docker-compose.dev.yml up -d</span></div>
                 <div class="code-line"><span class="comment"># 2. 进入后端容器</span></div>
                 <div class="code-line"><span class="command">docker-compose -f docker-compose.dev.yml exec backend bash</span></div>
-                <div class="code-line"><span class="comment"># 3. 运行自动入库脚本 (支持 company, law, product, zhaobiao, zhongbiao)</span></div>
-                <div class="code-line"><span class="command">uv run python scripts/import_real_data.py --file /external_data/company.csv --type company</span></div>
+                <div class="code-line"><span class="comment"># 3. 一键导入外部目录下的所有数据（脚本会自动根据文件名关键字如 company/law/product 等匹配表名）</span></div>
+                <div class="code-line"><span class="command">uv run python scripts/import_real_data.py --dir /external_data</span></div>
               </div>
             </div>
           </div>
