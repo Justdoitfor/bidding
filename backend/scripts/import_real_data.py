@@ -260,27 +260,29 @@ def process_milvus_file(file_path: str, table_type: str):
             final_text = header_text + f"内容片段:\n{chunk_text}"
 
             chunk_data = {
-                "id": f"{doc_id}_{chunk_idx}",
-                "core_text_for_bge_m3": final_text
+                "id": f"{doc_id}_{chunk_idx}"[:95],
+                "doc_id": str(doc_id)[:95],
+                "chunk_index": int(chunk_idx),
+                "core_text_for_bge_m3": final_text[:65000]
             }
 
             # Map scalar fields from CSV columns (hybrid search attributes)
             if table_type == "company":
-                chunk_data["source"] = clean_string(row.get("source")) or ""
+                chunk_data["source"] = (clean_string(row.get("source")) or "")[:250]
             elif table_type == "law":
-                chunk_data["source"] = clean_string(row.get("source")) or ""
-                chunk_data["pub_date"] = clean_string(row.get("pub_date")) or metadata.get("pub_date", "")
+                chunk_data["source"] = (clean_string(row.get("source")) or "")[:250]
+                chunk_data["pub_date"] = (clean_string(row.get("pub_date")) or metadata.get("pub_date", ""))[:45]
             elif table_type == "product":
-                chunk_data["source"] = clean_string(row.get("source")) or ""
+                chunk_data["source"] = (clean_string(row.get("source")) or "")[:250]
             elif table_type == "zhaobiao":
-                chunk_data["source"] = clean_string(row.get("source")) or ""
-                chunk_data["category"] = clean_string(row.get("category")) or metadata.get("industry", "")
-                chunk_data["pub_date"] = clean_string(row.get("pub_date")) or metadata.get("pub_date", "")
-                chunk_data["purchaser"] = clean_string(row.get("purchaser")) or metadata.get("purchaser", "")
+                chunk_data["source"] = (clean_string(row.get("source")) or "")[:250]
+                chunk_data["category"] = (clean_string(row.get("category")) or metadata.get("industry", ""))[:95]
+                chunk_data["pub_date"] = (clean_string(row.get("pub_date")) or metadata.get("pub_date", ""))[:45]
+                chunk_data["purchaser"] = (clean_string(row.get("purchaser")) or metadata.get("purchaser", ""))[:250]
             elif table_type == "zhongbiao":
-                chunk_data["category"] = clean_string(row.get("category")) or metadata.get("industry", "")
-                chunk_data["pub_date"] = clean_string(row.get("pub_date")) or metadata.get("win_date", "")
-                chunk_data["purchaser"] = clean_string(row.get("purchaser")) or metadata.get("purchaser", "")
+                chunk_data["category"] = (clean_string(row.get("category")) or metadata.get("industry", ""))[:95]
+                chunk_data["pub_date"] = (clean_string(row.get("pub_date")) or metadata.get("win_date", ""))[:45]
+                chunk_data["purchaser"] = (clean_string(row.get("purchaser")) or metadata.get("purchaser", ""))[:250]
 
             milvus_batch.append(chunk_data)
             success_chunks += 1
