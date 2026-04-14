@@ -9,13 +9,15 @@ services:
       - ./backend:/app
       # Map .venv to an anonymous volume to bypass Windows NTFS symlink restrictions
       - backend-venv:/app/.venv
+      # 外部真实数据挂载目录，可通过设置环境变量 EXTERNAL_DATA_DIR 来修改路径
+      - ${EXTERNAL_DATA_DIR:-./backend/data}:/external_data
     environment:
       - MYSQL_HOST=mysql
       - REDIS_URL=redis://redis:6379/0
       - MILVUS_HOST=milvus
       - UV_LINK_MODE=copy
       - UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
-    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-exclude", "*.db", "--reload-exclude", "*.db-journal", "--reload-exclude", "*.sqlite3"]
     depends_on:
       - mysql
       - redis

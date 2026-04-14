@@ -29,8 +29,8 @@ const submit = async () => {
       errorMsg.value = '该账号不是管理员'
       return
     }
-    localStorage.setItem('access_token', res.access_token)
-    localStorage.setItem('current_user', JSON.stringify(res.user))
+    localStorage.setItem('admin_access_token', res.access_token)
+    localStorage.setItem('admin_current_user', JSON.stringify(res.user))
     router.replace('/admin')
   } catch (e: any) {
     errorMsg.value = e?.response?.data?.detail || '登录失败'

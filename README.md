@@ -111,27 +111,32 @@ docker-compose -f docker-compose.dev.yml up -d
 
 ---
 
-## 💾 如何导入真实数据
+## 💾 如何导入外部真实数据
 
-系统自带的 `init_db.py` 仅用于初始化表结构和默认账号。如果您有真实的业务数据（企业信息、法律法规、招投标数据等），请按照以下步骤导入：
+系统自带的 `init_db.py` 仅用于初始化表结构和默认账号。如果您有真实的业务数据（企业信息、法律法规、招投标数据等），并且**数据存放在项目目录外部**，请按照以下步骤导入：
 
-1. **准备数据文件**
-   将您的真实数据文件（如 `.csv`, `.json`, `.xlsx`）放入项目的 `backend/data/` 目录下。
+1. **准备外部数据文件**
+   支持 `.csv`, `.json`, `.xlsx` 格式。数据列名需参考 `数据库文档.md` 中的字段。
 
-2. **编写/使用导入脚本**
-   在 `backend/scripts/` 目录下编写对应的数据清洗与入库脚本（可参考后续提供的示例脚本）。脚本需要连接数据库并写入数据。
+2. **挂载外部目录并重启**
+   在 PowerShell 中，将 `EXTERNAL_DATA_DIR` 环境变量指向您真实的外部数据文件夹路径（例如 `E:\my_real_data`），并重新启动容器使其生效：
+   ```powershell
+   $env:EXTERNAL_DATA_DIR="E:\my_real_data"
+   docker-compose -f docker-compose.dev.yml up -d
+   ```
 
-3. **在容器内执行导入**
-   保持 Docker 容器运行，打开终端执行导入命令：
-   ```bash
+3. **在容器内执行导入脚本**
+   进入后端容器，并使用已经编写好的通用导入脚本 `import_real_data.py`。该脚本已适配 `数据库文档.md` 中定义的所有 5 张关系表：
+   ```powershell
    # 进入后端容器
    docker-compose -f docker-compose.dev.yml exec backend bash
    
-   # 执行你的入库脚本（例如导入企业数据）
-   uv run python scripts/import_company_data.py --file data/real_company_data.csv
+   # 执行入库脚本（请根据实际文件和数据类型替换 --type 参数）
+   # 支持的 type 有: company, law, product, zhaobiao, zhongbiao
+   uv run python scripts/import_real_data.py --file /external_data/company.csv --type company
    ```
 
-*注：您也可以在浏览器登录**管理员后台**，进入“数据入库”面板查看相关操作指引。未来版本将直接在后台 UI 中支持拖拽上传文件一键入库。*
+*注：您也可以在浏览器登录**管理员后台**，进入“数据入库”面板查看相关操作指引。目前脚本支持 MySQL / SQLite 关系表入库，Milvus 向量数据入库正在开发完善中。*
 
 ---
 

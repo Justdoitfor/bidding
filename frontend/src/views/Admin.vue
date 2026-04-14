@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import request from '../api/request'
 import BrandMark from '../components/BrandMark.vue'
 
-const currentUser = ref(JSON.parse(localStorage.getItem('current_user') || '{}'))
+const currentUser = ref(JSON.parse(localStorage.getItem('admin_current_user') || '{}'))
 
 // Tabs
 const activeTab = ref('sessions') // 'sessions' | 'users' | 'data'
@@ -100,8 +100,8 @@ const closeDialog = () => {
 }
 
 const logout = () => {
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('current_user')
+  localStorage.removeItem('admin_access_token')
+  localStorage.removeItem('admin_current_user')
   window.location.href = '/admin/login'
 }
 
@@ -259,11 +259,13 @@ const formatDate = (dateStr: string) => {
                 <h4>终端手动入库指引</h4>
               </div>
               <div class="code-block">
-                <div class="code-line"><span class="comment"># 1. 将数据文件放入 backend/data/ 目录</span></div>
+                <div class="code-line"><span class="comment"># 1. 宿主机设置外部数据目录环境变量并重启容器 (例如真实数据在 E:\data)</span></div>
+                <div class="code-line"><span class="command">$env:EXTERNAL_DATA_DIR="E:\data"</span></div>
+                <div class="code-line"><span class="command">docker-compose -f docker-compose.dev.yml up -d</span></div>
                 <div class="code-line"><span class="comment"># 2. 进入后端容器</span></div>
-                <div class="code-line"><span class="command">docker-compose exec backend bash</span></div>
-                <div class="code-line"><span class="comment"># 3. 运行导入脚本（需根据实际数据结构开发对应的导入脚本）</span></div>
-                <div class="code-line"><span class="command">uv run python scripts/import_real_data.py --file data/your_data.csv</span></div>
+                <div class="code-line"><span class="command">docker-compose -f docker-compose.dev.yml exec backend bash</span></div>
+                <div class="code-line"><span class="comment"># 3. 运行自动入库脚本 (支持 company, law, product, zhaobiao, zhongbiao)</span></div>
+                <div class="code-line"><span class="command">uv run python scripts/import_real_data.py --file /external_data/company.csv --type company</span></div>
               </div>
             </div>
           </div>

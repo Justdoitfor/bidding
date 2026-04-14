@@ -37,22 +37,26 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const token = localStorage.getItem('access_token')
-  const userRaw = localStorage.getItem('current_user')
-  const user = userRaw ? JSON.parse(userRaw) : null
-
   const isAdminRoute = to.path.startsWith('/admin')
   const isAdminLogin = to.path === '/admin/login'
   const isAuthRoute = to.path === '/login' || to.path === '/register'
 
   if (isAdminRoute) {
+    const adminToken = localStorage.getItem('admin_access_token')
+    const adminRaw = localStorage.getItem('admin_current_user')
+    const adminUser = adminRaw ? JSON.parse(adminRaw) : null
+
     if (isAdminLogin) {
-      if (token && user?.is_admin) return { path: '/admin' }
+      if (adminToken && adminUser?.is_admin) return { path: '/admin' }
       return true
     }
-    if (!token || !user?.is_admin) return { path: '/admin/login' }
+    if (!adminToken || !adminUser?.is_admin) return { path: '/admin/login' }
     return true
   }
+
+  const token = localStorage.getItem('access_token')
+  const userRaw = localStorage.getItem('current_user')
+  const user = userRaw ? JSON.parse(userRaw) : null
 
   if (isAuthRoute) {
     if (token) return { path: '/' }

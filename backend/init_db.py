@@ -17,14 +17,14 @@ def generate_fake_data():
 
         if not db.query(User).first():
             admin = User(
-                id=str(uuid.uuid4()),
+                id="admin-uuid-0001",
                 username="admin",
                 password_hash=get_password_hash("admin123"),
                 is_admin=True,
                 is_active=True,
             )
             demo = User(
-                id=str(uuid.uuid4()),
+                id="demo-uuid-0002",
                 username="demo",
                 password_hash=get_password_hash("demo1234"),
                 is_admin=False,
