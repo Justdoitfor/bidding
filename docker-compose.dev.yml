@@ -45,8 +45,10 @@ services:
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: bidding_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: user123
     ports:
       - "13306:3306"
     volumes:

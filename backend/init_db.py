@@ -18,15 +18,15 @@ def generate_fake_data():
         if not db.query(User).first():
             admin = User(
                 id="admin-uuid-0001",
-                username="admin",
-                password_hash=get_password_hash("admin123"),
+                username="root",
+                password_hash=get_password_hash("admin"),
                 is_admin=True,
                 is_active=True,
             )
             demo = User(
                 id="demo-uuid-0002",
-                username="demo",
-                password_hash=get_password_hash("demo1234"),
+                username="user",
+                password_hash=get_password_hash("user123"),
                 is_admin=False,
                 is_active=True,
             )

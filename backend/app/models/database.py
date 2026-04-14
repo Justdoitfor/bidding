@@ -2,13 +2,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
 
-# Since we want a runnable demo without strictly requiring a running MySQL,
-# we'll default to SQLite if MySQL fails or isn't available in local run.
-# For Docker, it will use MySQL. Let's use a local SQLite for the standalone demo.
-SQLALCHEMY_DATABASE_URL = "sqlite:///./bidding_demo.db"
+# Force using MySQL as requested
+SQLALCHEMY_DATABASE_URL = f"mysql+mysqlconnector://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DB}"
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL,
+    pool_pre_ping=True,
+    pool_recycle=3600
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

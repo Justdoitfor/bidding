@@ -12,9 +12,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
 
     # Database Settings
-    MYSQL_USER: str = "root"
-    MYSQL_PASSWORD: str = "password"
-    MYSQL_HOST: str = "localhost"
+    MYSQL_USER: str = "user"
+    MYSQL_PASSWORD: str = "user123"
+    MYSQL_HOST: str = "mysql"
     MYSQL_PORT: int = 3306
     MYSQL_DB: str = "bidding_db"
     

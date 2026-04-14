@@ -13,12 +13,27 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.models.database import SessionLocal, engine
 from app.models.domain import Base, Company, Law, Product, Zhaobiao, Zhongbiao
+from app.rag.vector_store import create_milvus_collections, insert_into_milvus
+from sentence_transformers import SentenceTransformer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Ensure tables are created
+# Ensure tables and collections are created
 Base.metadata.create_all(bind=engine)
+try:
+    create_milvus_collections()
+except Exception as e:
+    logger.warning(f"Could not connect to Milvus, vector insertion will fail: {e}")
+
+# Load embedding model lazily
+_embed_model = None
+def get_embedding_model():
+    global _embed_model
+    if _embed_model is None:
+        logger.info("Loading BAAI/bge-m3 embedding model...")
+        _embed_model = SentenceTransformer("BAAI/bge-m3")
+    return _embed_model
 
 def get_db():
     db = SessionLocal()
@@ -63,6 +78,26 @@ def process_file(file_path: str, table_type: str):
 
     db: Session = next(get_db())
     success_count = 0
+    milvus_batch = []
+    
+    # Helper to flush milvus batch
+    def flush_milvus_batch():
+        if not milvus_batch:
+            return
+        
+        try:
+            texts = [item["core_text_for_bge_m3"] for item in milvus_batch]
+            model = get_embedding_model()
+            embeddings = model.encode(texts, normalize_embeddings=True).tolist()
+            
+            for i, item in enumerate(milvus_batch):
+                item["vector"] = embeddings[i]
+                
+            insert_into_milvus(f"milvus_{table_type}", milvus_batch)
+            milvus_batch.clear()
+        except Exception as e:
+            logger.error(f"Failed to insert vectors into Milvus for {table_type}: {e}")
+            milvus_batch.clear()
 
     try:
         for index, row in df.iterrows():
@@ -71,6 +106,8 @@ def process_file(file_path: str, table_type: str):
             
             # Clean up metadata_json (remove None)
             metadata_json = {k: v for k, v in metadata_json.items() if v is not None}
+            
+            milvus_data = {"id": record_id}
 
             if table_type == "company":
                 obj = Company(
@@ -95,6 +132,9 @@ def process_file(file_path: str, table_type: str):
                     business_scope=clean_string(row.get("business_scope")),
                     metadata_json=metadata_json
                 )
+                milvus_data["source"] = clean_string(row.get("source")) or ""
+                text = f"公司名称: {obj.company_name} 法定代表人: {obj.legal_rep} 经营范围: {obj.business_scope} 详细信息: {json.dumps(metadata_json, ensure_ascii=False)}"
+                milvus_data["core_text_for_bge_m3"] = text[:65000]
             elif table_type == "law":
                 obj = Law(
                     id=record_id,
@@ -105,6 +145,10 @@ def process_file(file_path: str, table_type: str):
                     content=clean_string(row.get("content")),
                     metadata_json=metadata_json
                 )
+                milvus_data["source"] = clean_string(row.get("source")) or ""
+                milvus_data["pub_date"] = clean_string(row.get("pub_date")) or ""
+                text = f"标题: {obj.title} 生效日期: {obj.effective_date} 内容摘要: {str(obj.content)[:500]} 详细信息: {json.dumps(metadata_json, ensure_ascii=False)}"
+                milvus_data["core_text_for_bge_m3"] = text[:65000]
             elif table_type == "product":
                 obj = Product(
                     id=record_id,
@@ -123,6 +167,9 @@ def process_file(file_path: str, table_type: str):
                     product_params=clean_string(row.get("product_params")),
                     metadata_json=metadata_json
                 )
+                milvus_data["source"] = clean_string(row.get("source")) or ""
+                text = f"产品名称: {obj.product_name} 供应商: {obj.supplier} 价格: {obj.price} 产品参数: {obj.product_params} 详细信息: {json.dumps(metadata_json, ensure_ascii=False)}"
+                milvus_data["core_text_for_bge_m3"] = text[:65000]
             elif table_type == "zhaobiao":
                 obj = Zhaobiao(
                     id=record_id,
@@ -138,6 +185,12 @@ def process_file(file_path: str, table_type: str):
                     content=clean_string(row.get("content")),
                     metadata_json=metadata_json
                 )
+                milvus_data["source"] = clean_string(row.get("source")) or ""
+                milvus_data["category"] = clean_string(row.get("category")) or clean_string(row.get("industry")) or ""
+                milvus_data["pub_date"] = clean_string(row.get("pub_date")) or clean_string(row.get("date")) or ""
+                milvus_data["purchaser"] = clean_string(row.get("purchaser")) or ""
+                text = f"招标标题: {obj.title} 项目名称: {obj.project_name} 采购人: {obj.purchaser} 内容: {str(obj.content)[:500]} 详细信息: {json.dumps(metadata_json, ensure_ascii=False)}"
+                milvus_data["core_text_for_bge_m3"] = text[:65000]
             elif table_type == "zhongbiao":
                 obj = Zhongbiao(
                     id=record_id,
@@ -155,20 +208,27 @@ def process_file(file_path: str, table_type: str):
                     content=clean_string(row.get("content")),
                     metadata_json=metadata_json
                 )
+                milvus_data["category"] = clean_string(row.get("category")) or clean_string(row.get("industry")) or ""
+                milvus_data["pub_date"] = clean_string(row.get("pub_date")) or clean_string(row.get("win_date")) or ""
+                milvus_data["purchaser"] = clean_string(row.get("purchaser")) or ""
+                text = f"中标项目: {obj.project_name} 中标人: {obj.winner} 中标金额: {obj.win_amount} 采购人: {obj.purchaser} 内容: {str(obj.content)[:500]} 详细信息: {json.dumps(metadata_json, ensure_ascii=False)}"
+                milvus_data["core_text_for_bge_m3"] = text[:65000]
             else:
                 logger.error(f"Unknown table type: {table_type}")
                 return
 
             db.merge(obj)
+            milvus_batch.append(milvus_data)
             success_count += 1
             
-            if success_count % 500 == 0:
+            if success_count % 100 == 0:
                 db.commit()
-                logger.info(f"Inserted {success_count} records...")
+                flush_milvus_batch()
+                logger.info(f"Inserted {success_count} records into MySQL and Milvus...")
 
         db.commit()
-        logger.info(f"Successfully imported {success_count} records into {table_type} table!")
-        logger.info(f"TODO: Add Milvus vector embedding logic for {table_type} (e.g. using BGE-M3)")
+        flush_milvus_batch()
+        logger.info(f"Successfully imported {success_count} records into {table_type} table and milvus_{table_type} collection!")
 
     except Exception as e:
         db.rollback()

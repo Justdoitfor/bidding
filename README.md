@@ -106,8 +106,8 @@ docker-compose -f docker-compose.dev.yml up -d
 - **后端 Swagger API 接口文档**：`http://localhost:8000/docs`
 
 > 默认测试账号：
-> - 管理员：`admin` / `admin123`
-> - 普通用户：`demo` / `demo1234`
+> - 管理员：`root` / `admin`
+> - 普通用户：`user` / `user123`
 
 ---
 
