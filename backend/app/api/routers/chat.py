@@ -1,13 +1,18 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from sqlalchemy.orm import Session
 import uuid
+import logging
 from datetime import datetime
 
 from app.api.deps import get_current_admin, get_current_user
 from app.models.database import get_db
-from app.models.domain import ChatSession, ChatMessage, Company, Zhaobiao, User
+from app.models.domain import ChatSession, ChatMessage, User
+from app.services.rag_service import retrieve_from_milvus
+from app.services.llm_service import generate_rag_answer
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -35,17 +40,29 @@ async def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db), c
     user_msg = ChatMessage(session_id=session_id, role="user", content=request.query)
     db.add(user_msg)
     
-    # Mock RAG retrieval logic based on local SQLite
-    # For a real system, it would search Milvus first, then MySQL.
-    answer = f"这是一个关于“{request.query}”的智能回答。数据来源：模拟问答库。"
-    sources = []
-    
-    # Simple mock: if query contains company, search company table
-    if "公司" in request.query or "企业" in request.query:
-        comps = db.query(Company).limit(1).all()
-        if comps:
-            answer = f"查找到相关企业：{comps[0].company_name}，法人：{comps[0].legal_rep}，状态：{comps[0].status}。"
-            sources.append("企业库")
+    try:
+        # 1. Retrieve relevant contexts from Milvus
+        retrieved_docs = retrieve_from_milvus(request.query, top_k=3)
+        
+        sources = []
+        context_parts = []
+        for doc in retrieved_docs:
+            source_info = f"{doc['collection']} (score: {doc['score']:.2f}): {doc['source']}"
+            sources.append(source_info)
+            context_parts.append(f"[来源: {doc['source']}]\n{doc['text']}")
+            
+        context_str = "\n\n".join(context_parts)
+        
+        if not context_str:
+            context_str = "没有找到相关的知识库背景信息。"
+            
+        # 2. Generate answer using Qwen LLM
+        answer = generate_rag_answer(context=context_str, query=request.query)
+        
+    except Exception as e:
+        logger.error(f"Error generating RAG answer: {e}")
+        answer = "抱歉，系统处理您的请求时遇到了错误，请稍后再试。"
+        sources = []
     
     # Save assistant message
     assistant_msg = ChatMessage(session_id=session_id, role="assistant", content=answer)
