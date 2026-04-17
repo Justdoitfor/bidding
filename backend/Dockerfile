@@ -4,14 +4,11 @@ FROM ${PYTHON_IMAGE}
 
 WORKDIR /app
 
-# Install uv (using mirror)
-RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple uv
+RUN pip install uv
 
 # Copy uv dependency files
 COPY pyproject.toml uv.lock ./
 
-# Set domestic mirror for uv to speed up downloads in China
-ENV UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 ENV UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
 ENV UV_PYTHON=3.11
 
