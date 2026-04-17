@@ -1,16 +1,18 @@
 # Allow dynamic injection of registry mirror if needed, fallback to default Docker Hub
-ARG PYTHON_IMAGE=python:3.11-slim
+ARG PYTHON_IMAGE=python:3.12-slim
 FROM ${PYTHON_IMAGE}
 
 WORKDIR /app
 
 RUN pip install uv
 
-# Copy uv dependency files
-COPY pyproject.toml uv.lock ./
+# Copy pyproject.toml first (uv sync will auto-generate/update uv.lock if missing)
+COPY pyproject.toml ./
+# If you have uv.lock locally, uncomment the next line, but it's safer to let uv resolve it freshly when changing python versions
+# COPY uv.lock ./
 
 ENV UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
-ENV UV_PYTHON=3.11
+ENV UV_PYTHON=3.12
 
 # Tell uv to prefer binary wheels to avoid building from source, and use the system Python
 ENV UV_COMPILE_BYTECODE=1
