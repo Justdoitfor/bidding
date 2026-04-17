@@ -88,24 +88,12 @@ bidding-rag-system/
 第一次运行项目时，需要构建镜像并初始化数据库表和默认账号：
 
 ```bash
-# 1. 构建镜像（建议使用详细输出，便于定位依赖下载/编译卡点）
-docker-compose -f docker-compose.dev.yml build --progress=plain
+# 1. 构建并启动所有容器
+docker-compose -f docker-compose.dev.yml up -d --build
 
-# 2. 启动所有容器
-docker-compose -f docker-compose.dev.yml up -d
-
-# 3. 查看后端启动日志（按 Ctrl + C 退出查看，不会停止容器）
-docker-compose -f docker-compose.dev.yml logs -f backend
-
-# 4. 等待后端启动完成后，执行数据库初始化脚本（创建表和默认 admin/demo 账号）
+# 2. 等待后端启动完成后，执行数据库初始化脚本（创建表和默认 admin/demo 账号）
 docker-compose -f docker-compose.dev.yml exec backend uv run python init_db.py
 ```
-
-> Windows PowerShell 若需要显式启用 BuildKit（用于依赖下载缓存加速），可先执行：
-> ```powershell
-> $env:DOCKER_BUILDKIT=1
-> $env:COMPOSE_DOCKER_CLI_BUILD=1
-> ```
 
 ### 3. 后续启动开发环境
 
@@ -118,7 +106,7 @@ docker-compose -f docker-compose.dev.yml up -d
 如果修改了 `docker-compose.dev.yml` 的挂载卷（例如 `EXTERNAL_DATA_DIR` 指向的目录），需要重建后端容器使挂载生效：
 
 ```bash
-docker-compose -f docker-compose.dev.yml up -d --no-deps --force-recreate backend
+docker-compose -f docker-compose.dev.yml up -d --force-recreate backend
 ```
 
 > **注意：** 该模式下，前端使用了 `Dockerfile.dev` 启动 Vite 热更新（HMR），且通过数据卷（Volumes）将宿主机代码实时映射到了容器内。
@@ -147,7 +135,7 @@ docker-compose -f docker-compose.dev.yml up -d --no-deps --force-recreate backen
    在 PowerShell 中，将 `EXTERNAL_DATA_DIR` 环境变量指向您真实的外部数据文件夹路径（例如 `E:\my_real_data`），并重新启动容器使其生效：
    ```powershell
    $env:EXTERNAL_DATA_DIR="E:\my_real_data"
-   docker-compose -f docker-compose.dev.yml up -d --no-deps --force-recreate backend
+   docker-compose -f docker-compose.dev.yml up -d --force-recreate backend
    ```
 
 3. **在容器内一键批量导入**
