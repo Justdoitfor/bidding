@@ -2,11 +2,11 @@
 
 ## 整体架构
 
-![](.\rag_platform_architecture.svg)
+![](./rag_platform_architecture.svg)
 
 ## RAG查询链路
 
-![](.\rag_query_pipeline.svg)
+![](./rag_query_pipeline.svg)
 
 ### 一、接入层（前端）
 
