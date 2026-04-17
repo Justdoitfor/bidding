@@ -23,9 +23,10 @@ ENV UV_NO_PROGRESS=1
 ENV UV_VERBOSE=1
 
 # First, install torch specifically targeting the PyTorch CPU index to avoid conflicts
-# We use torch>=2.2.0+cpu because Python 3.12 support was added in PyTorch 2.2+
+# We use torch==2.2.0+cpu because Python 3.12 support was added in PyTorch 2.2+
+# Note: PEP 440 forbids operators like >= with local version identifiers (+cpu)
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system "torch>=2.2.0+cpu" --extra-index-url https://download.pytorch.org/whl/cpu
+    uv pip install --system "torch==2.2.0+cpu" --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Then, sync the rest of the dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
