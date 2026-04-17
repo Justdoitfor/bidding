@@ -19,6 +19,64 @@ const searchSession = ref('')
 const usersData = ref<any[]>([])
 const searchUser = ref('')
 
+// Data Upload
+const uploadStatus = ref('')
+const uploadMessage = ref('')
+const selectedTableType = ref('company')
+const fileInput = ref<HTMLInputElement | null>(null)
+
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+const handleFileUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (!target.files || target.files.length === 0) return
+  
+  const file = target.files[0]
+  uploadStatus.value = 'uploading'
+  uploadMessage.value = `正在上传 ${file.name}...`
+  
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('table_type', selectedTableType.value)
+  
+  try {
+    const res: any = await request.post('/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    uploadStatus.value = 'success'
+    uploadMessage.value = res.message || '文件上传成功，正在后台处理中'
+  } catch (error: any) {
+    uploadStatus.value = 'error'
+    uploadMessage.value = error.response?.data?.detail || '文件上传失败'
+    console.error('上传失败', error)
+  } finally {
+    // Reset file input
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
+  }
+}
+
+const handleDrop = (event: DragEvent) => {
+  event.preventDefault()
+  if (!event.dataTransfer?.files || event.dataTransfer.files.length === 0) return
+  
+  // Assign files to the hidden input and trigger upload
+  if (fileInput.value) {
+    fileInput.value.files = event.dataTransfer.files
+    const changeEvent = new Event('change', { bubbles: true })
+    fileInput.value.dispatchEvent(changeEvent)
+  }
+}
+
+const handleDragOver = (event: DragEvent) => {
+  event.preventDefault()
+}
+
 const fetchAllHistory = async () => {
   try {
     const res: any = await request.get('/chat/admin/history')
@@ -240,23 +298,44 @@ const formatDate = (dateStr: string) => {
           <div class="data-ingestion-panel">
             <div class="panel-header">
               <h3>真实数据导入</h3>
-              <p class="panel-desc">目前可通过后端提供的脚本，将企业、产品、法规等数据导入至向量库和关系库。未来将在此处支持一键拖拽上传。</p>
+              <p class="panel-desc">通过下方组件，将企业、产品、法规等结构化数据导入至向量库（Milvus）和关系库（MySQL）。</p>
             </div>
             
-            <div class="upload-zone">
-              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#a3a3a3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              <span class="upload-text">拖拽数据文件至此处，或 <button class="link-btn">点击上传</button></span>
-              <span class="upload-hint">支持 .csv, .json, .xlsx 格式（该功能正在开发中，请使用下方终端命令导入）</span>
+            <div class="upload-section">
+              <div class="form-group">
+                <label>选择要导入的数据类型：</label>
+                <select v-model="selectedTableType" class="type-select">
+                  <option value="company">企业信息 (Company)</option>
+                  <option value="law">政策法规 (Law)</option>
+                  <option value="product">产品数据 (Product)</option>
+                  <option value="zhaobiao">招标公告 (Zhaobiao)</option>
+                  <option value="zhongbiao">中标公示 (Zhongbiao)</option>
+                </select>
+              </div>
+
+              <div class="upload-zone" @drop="handleDrop" @dragover="handleDragOver" @click="triggerFileInput">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#a3a3a3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span class="upload-text">拖拽数据文件至此处，或 <button class="link-btn">点击上传</button></span>
+                <span class="upload-hint">支持 .csv, .json, .xlsx 格式（建议单文件不超过 50MB）</span>
+                <input type="file" ref="fileInput" @change="handleFileUpload" accept=".csv,.xlsx,.json" style="display: none;" />
+              </div>
+
+              <div v-if="uploadStatus" :class="['upload-status-alert', uploadStatus]">
+                <span class="status-icon" v-if="uploadStatus === 'uploading'">⏳</span>
+                <span class="status-icon" v-if="uploadStatus === 'success'">✅</span>
+                <span class="status-icon" v-if="uploadStatus === 'error'">❌</span>
+                {{ uploadMessage }}
+              </div>
             </div>
 
             <div class="manual-instruction">
               <div class="instruction-header">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-                <h4>终端手动入库指引</h4>
+                <h4>大批量数据终端入库指引</h4>
               </div>
               <div class="code-block">
                 <div class="code-line"><span class="comment"># 1. 宿主机设置外部数据目录环境变量并重启容器 (例如真实数据在 E:\data)</span></div>
@@ -264,8 +343,8 @@ const formatDate = (dateStr: string) => {
                 <div class="code-line"><span class="command">docker-compose -f docker-compose.dev.yml up -d</span></div>
                 <div class="code-line"><span class="comment"># 2. 进入后端容器</span></div>
                 <div class="code-line"><span class="command">docker-compose -f docker-compose.dev.yml exec backend bash</span></div>
-                <div class="code-line"><span class="comment"># 3. 一键导入外部目录下的所有数据（脚本会自动根据文件名关键字如 company/law/product 等匹配表名）</span></div>
-                <div class="code-line"><span class="command">uv run python scripts/import_real_data.py --dir /external_data</span></div>
+                <div class="code-line"><span class="comment"># 3. 一键导入外部目录下的所有数据（确保文件名包含类型关键字）</span></div>
+                <div class="code-line"><span class="command">python scripts/import_real_data.py --dir /data</span></div>
               </div>
             </div>
           </div>
@@ -645,6 +724,65 @@ const formatDate = (dateStr: string) => {
   display: flex;
   flex-direction: column;
   gap: 32px;
+}
+
+.upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #262626;
+}
+
+.type-select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e5e5;
+  background-color: #ffffff;
+  font-size: 14px;
+  color: #000000;
+  outline: none;
+}
+
+.type-select:focus {
+  border-color: #a3a3a3;
+}
+
+.upload-status-alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-status-alert.uploading {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.upload-status-alert.success {
+  background-color: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.upload-status-alert.error {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .panel-header h3 {
