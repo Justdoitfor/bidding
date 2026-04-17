@@ -43,9 +43,12 @@
 
 ```text
 bidding-rag-system/
-├── data/               # 数据库设计文档及示例数据
-│   ├── 数据库文档.md    # 数据表设计规范
-│   └── sample_company.csv # 示例导入数据
+├── data/               # 真实业务示例数据存放目录
+│   ├── company.csv      # 企业信息数据
+│   ├── law.csv          # 政策法规数据
+│   ├── product.csv      # 产品数据
+│   ├── zhaobiao.csv     # 招标公告数据
+│   └── zhongbiao.csv    # 中标公示数据
 ├── frontend/           # Vue 3 前端工程目录
 │   ├── src/            # 前端源码 (api, components, views, store 等)
 │   ├── package.json    # npm 依赖配置
