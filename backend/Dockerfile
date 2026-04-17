@@ -21,7 +21,10 @@ ENV UV_NO_PROGRESS=1
 ENV UV_VERBOSE=1
 
 # Install dependencies using uv
-RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-dev
+# --index-strategy unsafe-best-match is used to prevent uv from failing when 
+# it finds an older version of a package (like requests) in the pytorch index 
+# and refuses to look in the default PyPI index for the newer required version.
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-dev --index-strategy unsafe-best-match
 
 # Copy application code
 COPY . .
