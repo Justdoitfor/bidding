@@ -12,6 +12,7 @@ COPY pyproject.toml uv.lock ./
 
 # Set domestic mirror for uv to speed up downloads in China
 ENV UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+ENV UV_PYTHON=3.11
 
 # Install dependencies using uv
 RUN uv sync --no-dev
