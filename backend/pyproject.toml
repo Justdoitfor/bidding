@@ -29,3 +29,12 @@ dependencies = [
     "sentence-transformers>=5.4.0",
     "langchain-text-splitters>=1.1.1",
 ]
+
+[tool.uv]
+# Force uv to look at the PyTorch CPU index FIRST to prevent downloading the 5GB NVIDIA CUDA GPU wheels
+index-strategy = "unsafe-first-match"
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+default = true
