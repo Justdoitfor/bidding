@@ -14,6 +14,10 @@ COPY pyproject.toml uv.lock ./
 ENV UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 ENV UV_PYTHON=3.11
 
+# Tell uv to prefer binary wheels to avoid building from source, and use the system Python
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_SYSTEM_PYTHON=1
+
 # Install dependencies using uv
 RUN uv sync --no-dev
 
