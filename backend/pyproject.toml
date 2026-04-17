@@ -29,3 +29,6 @@ dependencies = [
     "sentence-transformers>=5.4.0",
     "langchain-text-splitters>=1.1.1",
 ]
+
+[tool.uv]
+extra-index-url = ["https://download.pytorch.org/whl/cpu"]
