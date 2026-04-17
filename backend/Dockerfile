@@ -4,8 +4,8 @@ FROM ${PYTHON_IMAGE}
 
 WORKDIR /app
 
-# Install uv
-RUN pip install uv
+# Install uv (using mirror)
+RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple uv
 
 # Copy uv dependency files
 COPY pyproject.toml uv.lock ./
