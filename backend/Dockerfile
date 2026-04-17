@@ -23,12 +23,6 @@ ENV UV_SYSTEM_PYTHON=1
 ENV UV_NO_PROGRESS=1
 ENV UV_VERBOSE=1
 
-# Workaround for torch download timeouts: manually fetch the CPU wheel first using curl
-# and install it locally, then proceed with uv sync for the rest.
-RUN curl -L -o torch-2.1.0+cpu-cp311-cp311-linux_x86_64.whl https://download.pytorch.org/whl/cpu/torch-2.1.0%2Bcpu-cp311-cp311-linux_x86_64.whl && \
-    uv pip install --system ./torch-2.1.0+cpu-cp311-cp311-linux_x86_64.whl && \
-    rm torch-2.1.0+cpu-cp311-cp311-linux_x86_64.whl
-
 # Install dependencies using uv
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-dev
 
