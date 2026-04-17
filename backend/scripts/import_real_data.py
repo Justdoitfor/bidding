@@ -341,10 +341,13 @@ def process_directory(dir_path: str):
                 process_milvus_file(file_path, matched_type)
                 found_files = True
             else:
-                logger.warning(f"File {filename} matches type '{matched_type}' but doesn't start with 'mysql_' or 'milvus_'. Skipping.")
+                logger.info(f"Found generic target file: {filename}, processing for both MySQL and Milvus")
+                process_mysql_file(file_path, matched_type)
+                process_milvus_file(file_path, matched_type)
+                found_files = True
             
     if not found_files:
-        logger.warning(f"No valid files found. Files must start with 'mysql_' or 'milvus_'.")
+        logger.warning(f"No valid files found. Files must contain a supported type keyword.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
