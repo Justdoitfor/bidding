@@ -2,6 +2,9 @@
 ARG PYTHON_IMAGE=python:3.12-slim
 FROM ${PYTHON_IMAGE}
 
+# Install curl for fetching PyTorch directly
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 RUN pip install uv
@@ -21,6 +24,11 @@ ENV UV_SYSTEM_PYTHON=1
 # Print detailed logs during uv sync to prevent appearing "stuck"
 ENV UV_NO_PROGRESS=1
 ENV UV_VERBOSE=1
+
+# Manually fetch and install PyTorch CPU wheel first to completely bypass uv's resolution conflicts
+RUN curl -L -o torch-2.1.0+cpu-cp312-cp312-linux_x86_64.whl https://download.pytorch.org/whl/cpu/torch-2.1.0%2Bcpu-cp312-cp312-linux_x86_64.whl && \
+    uv pip install --system ./torch-2.1.0+cpu-cp312-cp312-linux_x86_64.whl && \
+    rm torch-2.1.0+cpu-cp312-cp312-linux_x86_64.whl
 
 # Install dependencies using uv
 # --index-strategy unsafe-best-match is used to prevent uv from failing when 
