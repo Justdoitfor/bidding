@@ -57,12 +57,16 @@ bidding-rag-system/
 │   │   ├── models/     # 数据库与数据传输模型
 │   │   ├── rag/        # RAG 核心组件 (Loader, Splitter, VectorStore)
 │   │   └── services/   # 业务逻辑服务
+│   ├── scripts/        # 运维与数据脚本
+│   │   ├── clear_data.py       # 一键清理所有业务数据表
+│   │   └── import_real_data.py # 真实业务数据导入（向量库与关系库）
 │   ├── pyproject.toml  # uv 依赖管理配置文件
-│   ├── init_db.py      # 数据库初始化脚本
+│   ├── init_db.py      # 数据库初始化结构与默认账号
 │   └── Dockerfile      # 后端运行镜像
 ├── docs/               # 项目文档与设计规范
 │   └── architecture.md # 架构设计与开发规范详情
-├── docker-compose.yml  # 全栈容器编排文件
+├── docker-compose.yml  # 生产环境容器编排文件
+├── docker-compose.dev.yml # 开发环境容器编排文件
 └── README.md           # 项目说明文档
 ```
 
