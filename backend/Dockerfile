@@ -18,6 +18,10 @@ ENV UV_PYTHON=3.11
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_SYSTEM_PYTHON=1
 
+# Print detailed logs during uv sync to prevent appearing "stuck"
+ENV UV_NO_PROGRESS=1
+ENV UV_VERBOSE=1
+
 # Install dependencies using uv
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-dev
 
