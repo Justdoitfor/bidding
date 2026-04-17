@@ -66,7 +66,7 @@ def read_data_file(file_path: str):
         raise ValueError("Unsupported file format.")
     return df.where(pd.notnull(df), None)
 
-def process_mysql_file(file_path: str, table_type: str):
+def process_mysql_file(file_path: str, table_type: str, db_session: Session = None):
     logger.info(f"Processing MySQL data from {file_path} into table {table_type}...")
     try:
         df = read_data_file(file_path)
@@ -74,7 +74,8 @@ def process_mysql_file(file_path: str, table_type: str):
         logger.error(f"Failed to read {file_path}: {e}")
         return
 
-    db: Session = next(get_db())
+    # Use provided session or create a new one
+    db = db_session if db_session else SessionLocal()
     success_count = 0
 
     try:
@@ -157,6 +158,9 @@ def process_mysql_file(file_path: str, table_type: str):
     except Exception as e:
         db.rollback()
         logger.error(f"MySQL import error: {e}")
+    finally:
+        if not db_session:
+            db.close()
 
 def process_milvus_file(file_path: str, table_type: str):
     logger.info(f"Processing Milvus vector data from {file_path} for {table_type}...")
@@ -193,8 +197,19 @@ def process_milvus_file(file_path: str, table_type: str):
 
     for index, row in df.iterrows():
         doc_id = clean_string(row.get("id")) or str(uuid.uuid4())
-        raw_text = str(row.get("core_text_for_bge_m3") or "")
         
+        # If 'core_text_for_bge_m3' exists, use it. Otherwise, build it from the row fields.
+        if "core_text_for_bge_m3" in row and pd.notnull(row["core_text_for_bge_m3"]):
+            raw_text = str(row["core_text_for_bge_m3"])
+        else:
+            parts = []
+            for col in df.columns:
+                if col not in ['id', 'metadata', 'vector'] and pd.notnull(row[col]):
+                    parts.append(f"{col}: {row[col]}")
+            raw_text = "\n".join(parts)
+            if "metadata" in row and pd.notnull(row["metadata"]):
+                raw_text += f"\n附加信息：{row['metadata']}"
+
         # Smart extraction: isolate JSON metadata and core textual content safely
         json_start = raw_text.rfind("{")
         json_end = raw_text.rfind("}")

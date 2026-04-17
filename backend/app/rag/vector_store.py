@@ -100,9 +100,24 @@ def create_milvus_collections():
 
 def insert_into_milvus(collection_name: str, data: list):
     """
-    data should be a list of dictionaries matching the collection schema
+    data should be a list of dictionaries matching the collection schema.
+    This function performs an upsert: deletes existing chunks for the given doc_ids, then inserts.
     """
     get_milvus_connection()
     col = Collection(collection_name)
+    
+    # Extract unique doc_ids from the batch to delete existing chunks
+    doc_ids = list(set([item["doc_id"] for item in data if "doc_id" in item]))
+    if doc_ids:
+        # Construct an IN expression for doc_ids
+        # Using string formatting carefully since doc_ids are strings
+        in_expr = ", ".join([f"'{d}'" for d in doc_ids])
+        delete_expr = f"doc_id in [{in_expr}]"
+        try:
+            col.delete(expr=delete_expr)
+            logger.info(f"Deleted existing vectors for {len(doc_ids)} docs in {collection_name}")
+        except Exception as e:
+            logger.warning(f"Delete before insert failed (might be empty collection): {e}")
+
     col.insert(data)
     col.flush()
