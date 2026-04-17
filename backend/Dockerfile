@@ -19,7 +19,7 @@ ENV UV_COMPILE_BYTECODE=1
 ENV UV_SYSTEM_PYTHON=1
 
 # Install dependencies using uv
-RUN uv sync --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-dev
 
 # Copy application code
 COPY . .
