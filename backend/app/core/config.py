@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "招投标信息智能问答平台"
     API_V1_STR: str = "/api/v1"
 
-    SECRET_KEY: str = "change-me"
+    SECRET_KEY: str = ""
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
     
     # CORS
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     # LLM & Embedding Settings
     QWEN_API_KEY: str = ""
     QWEN_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    QWEN_MODEL_NAME: str = "qwen-plus"
+    QWEN_MODEL_NAME: str = ""
     SPARK_API_KEY: str = ""
     SPARK_APP_ID: str = ""
     SPARK_API_SECRET: str = ""
