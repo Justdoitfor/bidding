@@ -6,6 +6,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import create_engine
 from app.models.database import Base
+# IMPORTANT: Import all models so they are registered with Base.metadata before drop_all/create_all
+from app.models.domain import User, Company, Law, Product, Zhaobiao, Zhongbiao, ChatSession, ChatMessage
 from app.core.config import settings
 from pymilvus import connections, utility
 
