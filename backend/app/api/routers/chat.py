@@ -26,7 +26,8 @@ class ChatResponse(BaseModel):
     session_id: str
     sources: list
 
-@router.post("/", response_model=ChatResponse)
+@router.post("", response_model=ChatResponse)
+@router.post("/", response_model=ChatResponse, include_in_schema=False)
 async def chat_with_agent(request: ChatRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     session_id = request.session_id
     if not session_id:

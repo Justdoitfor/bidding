@@ -104,7 +104,7 @@ const sendMessage = async () => {
           <BrandMark :size="24" class="llama-icon" />
           <h1 class="brand-name">招投标信息智能问答平台</h1>
         </div>
-        <button class="new-chat-btn" @click="startNewChat">
+        <button type="button" class="new-chat-btn" @click="startNewChat">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           新建会话
         </button>
@@ -130,7 +130,7 @@ const sendMessage = async () => {
           </div>
           <span class="user-name">{{ currentUser.username || '普通用户' }}</span>
         </div>
-        <button class="logout-btn" @click="logout">退出登录</button>
+        <button type="button" class="logout-btn" @click="logout">退出登录</button>
       </div>
     </aside>
 
@@ -146,13 +146,13 @@ const sendMessage = async () => {
           <p class="hero-subtitle">您可以提问关于企业信息、政策法规、招标数据及商品价格等任何问题。</p>
           
           <div class="suggestion-grid">
-            <button class="suggestion-pill" @click="query = '查询北京科技有限公司的工商信息'; sendMessage()">
+            <button type="button" class="suggestion-pill" @click="query = '查询北京科技有限公司的工商信息'; sendMessage()">
               查询企业信息
             </button>
-            <button class="suggestion-pill" @click="query = '最近有哪些高性能服务器的招标项目？'; sendMessage()">
+            <button type="button" class="suggestion-pill" @click="query = '最近有哪些高性能服务器的招标项目？'; sendMessage()">
               查找招标项目
             </button>
-            <button class="suggestion-pill" @click="query = '中华人民共和国招标投标法的核心内容是什么？'; sendMessage()">
+            <button type="button" class="suggestion-pill" @click="query = '中华人民共和国招标投标法的核心内容是什么？'; sendMessage()">
               检索政策法规
             </button>
           </div>
@@ -189,10 +189,10 @@ const sendMessage = async () => {
             class="chat-input" 
             v-model="query" 
             placeholder="请输入问题…" 
-            @keyup.enter="sendMessage"
+            @keydown.enter.prevent="sendMessage"
             :disabled="loading"
           />
-          <button class="send-btn" @click="sendMessage" :disabled="loading || !query.trim()">
+          <button type="button" class="send-btn" @click="sendMessage" :disabled="loading || !query.trim()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"></line>
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -538,7 +538,7 @@ const sendMessage = async () => {
 /* --- Markdown Styles --- */
 .markdown-body {
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.5;
   color: #24292f;
 }
 
@@ -546,19 +546,19 @@ const sendMessage = async () => {
 .markdown-body :deep(h2),
 .markdown-body :deep(h3),
 .markdown-body :deep(h4) {
-  margin-top: 24px;
-  margin-bottom: 16px;
+  margin-top: 16px;
+  margin-bottom: 12px;
   font-weight: 600;
   line-height: 1.25;
 }
 
-.markdown-body :deep(h1) { font-size: 2em; }
+.markdown-body :deep(h1) { font-size: 1.75em; }
 .markdown-body :deep(h2) { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #hsla(210,18%,87%,1); }
 .markdown-body :deep(h3) { font-size: 1.25em; }
 
 .markdown-body :deep(p) {
   margin-top: 0;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .markdown-body :deep(a) {
@@ -573,12 +573,12 @@ const sendMessage = async () => {
 .markdown-body :deep(ul),
 .markdown-body :deep(ol) {
   margin-top: 0;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   padding-left: 2em;
 }
 
 .markdown-body :deep(li) {
-  margin-top: 0.25em;
+  margin-top: 0.15em;
 }
 
 .markdown-body :deep(code) {
