@@ -6,6 +6,7 @@ import os
 import uuid
 from sqlalchemy.orm import Session
 import logging
+import re
 
 # Add backend directory to sys.path to import app modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -64,6 +65,7 @@ def read_data_file(file_path: str):
         df = pd.read_json(file_path)
     else:
         raise ValueError("Unsupported file format.")
+    df.columns = [str(c).lstrip("\ufeff").strip() for c in df.columns]
     return df.where(pd.notnull(df), None)
 
 def infer_table_type_from_filename(file_path: str) -> str:
@@ -79,6 +81,38 @@ def infer_table_type_from_filename(file_path: str) -> str:
     if "zhongbiao" in filename:
         return "zhongbiao"
     return None
+
+def normalize_record_id(raw_id, table_type: str, metadata_json: dict) -> str:
+    value = clean_string(raw_id)
+    if not value:
+        new_id = str(uuid.uuid4())
+        metadata_json["raw_id"] = raw_id
+        return new_id
+
+    if any(ch.isspace() for ch in value) or value.lower().startswith("git "):
+        new_id = str(uuid.uuid4())
+        metadata_json["raw_id"] = value
+        return new_id
+
+    allowed = re.compile(r"^[A-Za-z0-9_\-]+$")
+    if not allowed.match(value):
+        new_id = str(uuid.uuid4())
+        metadata_json["raw_id"] = value
+        return new_id
+
+    prefix_rules = {
+        "company": r"^(COMP_|company_).+",
+        "law": r"^(LAW_|law_).+",
+        "product": r"^(PROD_|product_).+",
+        "zhaobiao": r"^(ZHAO_|zhaobiao_).+",
+        "zhongbiao": r"^(ZHONG_|zhongbiao_|ZB_).+",
+    }
+    rule = prefix_rules.get(table_type)
+    if rule and not re.match(rule, value, flags=re.IGNORECASE):
+        metadata_json["raw_id"] = value
+        return value
+
+    return value
 
 def process_mysql_file(file_path: str, table_type: str = None, db_session: Session = None):
     logger.info(f"Processing MySQL data from {file_path}...")
@@ -102,8 +136,6 @@ def process_mysql_file(file_path: str, table_type: str = None, db_session: Sessi
 
     try:
         for index, row in df.iterrows():
-            record_id = clean_string(row.get("id")) or str(uuid.uuid4())
-            
             # Smart metadata parsing
             metadata_json = {k: v for k, v in row.to_dict().items() if v is not None and k != "metadata"}
             if "metadata" in row and pd.notnull(row["metadata"]):
@@ -115,6 +147,8 @@ def process_mysql_file(file_path: str, table_type: str = None, db_session: Sessi
                         metadata_json["raw_metadata"] = row["metadata"]
                 except Exception:
                     metadata_json["raw_metadata"] = row["metadata"]
+
+            record_id = normalize_record_id(row.get("id"), table_type, metadata_json)
 
             if table_type == "company":
                 obj = Company(
@@ -284,8 +318,8 @@ def process_milvus_file(file_path: str, table_type: str = None):
 
         for _, row in df.iterrows():
             row_dict = row.to_dict()
-            doc_id = clean_string(row_dict.get("id")) or str(uuid.uuid4())
             meta = _parse_metadata_cell(row_dict.get("metadata"))
+            doc_id = normalize_record_id(row_dict.get("id"), table_type, meta)
             title = clean_string(row_dict.get("title")) or ""
             effective_date = clean_string(row_dict.get("effective_date")) or ""
             chapter = clean_string(meta.get("chapter")) or ""
@@ -318,7 +352,8 @@ def process_milvus_file(file_path: str, table_type: str = None):
 
     for _, row in df.iterrows():
         row_dict = row.to_dict()
-        doc_id = clean_string(row_dict.get("id")) or str(uuid.uuid4())
+        meta_for_id = _parse_metadata_cell(row_dict.get("metadata"))
+        doc_id = normalize_record_id(row_dict.get("id"), table_type, meta_for_id)
 
         if table_type == "company":
             chunk_text = _build_company_chunk(row_dict)
@@ -363,7 +398,7 @@ def process_milvus_file(file_path: str, table_type: str = None):
             )
         elif table_type == "zhongbiao":
             chunk_text = _build_zhongbiao_chunk(row_dict)
-            meta = _parse_metadata_cell(row_dict.get("metadata"))
+            meta = meta_for_id
             zhaobiao_doc_id = clean_string(row_dict.get("zhaobiao_doc_id")) or clean_string(meta.get("zhaobiao_doc_id")) or ""
             milvus_batch.append(
                 {
