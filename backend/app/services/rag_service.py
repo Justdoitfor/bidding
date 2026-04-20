@@ -48,6 +48,12 @@ def retrieve_from_milvus(query: str, top_k: int = 5) -> list:
                 col = Collection(col_name)
                 col.load() # Load into memory before searching
                 
+                # Check schema to see if "source" field exists in this collection
+                schema_fields = [f.name for f in col.schema.fields]
+                output_fields = ["core_text_for_bge_m3"]
+                if "source" in schema_fields:
+                    output_fields.append("source")
+                
                 # We want to retrieve the core text back
                 results = col.search(
                     data=[query_vector],
@@ -55,7 +61,7 @@ def retrieve_from_milvus(query: str, top_k: int = 5) -> list:
                     param=search_params,
                     limit=top_k,
                     expr=None,
-                    output_fields=["core_text_for_bge_m3", "source"]
+                    output_fields=output_fields
                 )
                 
                 # Parse results
@@ -63,7 +69,7 @@ def retrieve_from_milvus(query: str, top_k: int = 5) -> list:
                     for hit in hits:
                         # hit.entity.get returns the field value
                         text = hit.entity.get("core_text_for_bge_m3")
-                        source = hit.entity.get("source")
+                        source = hit.entity.get("source") if "source" in output_fields else f"[{col_name}]"
                         score = hit.score
                         
                         all_results.append({
