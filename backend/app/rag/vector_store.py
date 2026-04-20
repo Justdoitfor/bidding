@@ -74,6 +74,7 @@ def insert_into_milvus(collection_name: str, data: list):
     """
     get_milvus_connection()
     col = Collection(collection_name)
+    col.load()
     
     # Extract unique doc_ids from the batch to delete existing chunks
     doc_ids = list(set([item["doc_id"] for item in data if "doc_id" in item]))

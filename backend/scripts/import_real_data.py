@@ -66,21 +66,25 @@ def read_data_file(file_path: str):
         raise ValueError("Unsupported file format.")
     return df.where(pd.notnull(df), None)
 
-def detect_table_type(df: pd.DataFrame) -> str:
+def detect_table_type(df: pd.DataFrame, filename: str = "") -> str:
     """
     Automatically detect the table type based on the columns present in the DataFrame.
     """
     columns = set(df.columns)
     
-    if "credit_code" in columns and "legal_rep" in columns:
+    if "credit_code" in columns or "legal_rep" in columns:
         return "company"
-    elif "effective_date" in columns and "pub_date" in columns and "title" in columns and "project_num" not in columns:
+    elif "effective_date" in columns or ("pub_date" in columns and "title" in columns and "project_num" not in columns):
         return "law"
-    elif "supplier" in columns and "price" in columns and "product_name" in columns:
+    elif "supplier" in columns or "price" in columns or "product_name" in columns:
         return "product"
-    elif "purchaser" in columns and "budget" in columns and "project_name" in columns:
+    elif "purchaser" in columns and "budget" in columns:
         return "zhaobiao"
-    elif "winner" in columns and "win_amount" in columns and "project_name" in columns:
+    elif "winner" in columns and "win_amount" in columns:
+        return "zhongbiao"
+    elif "zhaobiao" in filename.lower():
+        return "zhaobiao"
+    elif "zhongbiao" in filename.lower():
         return "zhongbiao"
     
     return None
@@ -94,7 +98,7 @@ def process_mysql_file(file_path: str, table_type: str = None, db_session: Sessi
         return
 
     if not table_type:
-        table_type = detect_table_type(df)
+        table_type = detect_table_type(df, os.path.basename(file_path))
         if not table_type:
             logger.error(f"Could not automatically detect table type for {file_path}. Missing required signature columns.")
             return
@@ -198,7 +202,7 @@ def process_milvus_file(file_path: str, table_type: str = None):
         return
 
     if not table_type:
-        table_type = detect_table_type(df)
+        table_type = detect_table_type(df, os.path.basename(file_path))
         if not table_type:
             logger.error(f"Could not automatically detect table type for {file_path}. Missing required signature columns.")
             return
