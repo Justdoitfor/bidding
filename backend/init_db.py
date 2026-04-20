@@ -1,10 +1,7 @@
-from sqlalchemy import create_engine
 from app.models.database import Base, engine, SessionLocal
 from app.models.domain import Company, Law, Product, Zhaobiao, Zhongbiao, ChatSession, ChatMessage, User
 from app.core.security import get_password_hash
 import uuid
-import random
-from datetime import datetime, timedelta
 
 print("Creating database tables...")
 Base.metadata.create_all(bind=engine)
@@ -33,8 +30,8 @@ def generate_fake_data():
             db.add_all([admin, demo])
             db.commit()
         else:
-            admin = db.query(User).filter(User.username == "admin").first()
-            demo = db.query(User).filter(User.username == "demo").first()
+            admin = db.query(User).filter(User.username == "root").first()
+            demo = db.query(User).filter(User.username == "user").first()
 
         if db.query(Company).first():
             print("Business data already exists. Skipping mock business data generation.")
