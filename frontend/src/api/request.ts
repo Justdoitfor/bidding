@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
-  timeout: 600000,
+  timeout: 90000, // 90 seconds to wait for LLM processing
 });
 
 request.interceptors.request.use((config) => {

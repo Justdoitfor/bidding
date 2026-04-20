@@ -1051,7 +1051,7 @@ const formatDate = (dateStr: string) => {
 /* --- Markdown Styles --- */
 .markdown-body {
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.2;
   color: #24292f;
 }
 
@@ -1059,19 +1059,19 @@ const formatDate = (dateStr: string) => {
 .markdown-body :deep(h2),
 .markdown-body :deep(h3),
 .markdown-body :deep(h4) {
-  margin-top: 16px;
-  margin-bottom: 12px;
+  margin-top: 6px;
+  margin-bottom: 4px;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.15;
 }
 
-.markdown-body :deep(h1) { font-size: 1.75em; }
-.markdown-body :deep(h2) { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #hsla(210,18%,87%,1); }
-.markdown-body :deep(h3) { font-size: 1.25em; }
+.markdown-body :deep(h1) { font-size: 1.5em; }
+.markdown-body :deep(h2) { font-size: 1.3em; padding-bottom: 0.1em; border-bottom: 1px solid #hsla(210,18%,87%,1); }
+.markdown-body :deep(h3) { font-size: 1.1em; }
 
 .markdown-body :deep(p) {
   margin-top: 0;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
 .markdown-body :deep(a) {
@@ -1086,12 +1086,12 @@ const formatDate = (dateStr: string) => {
 .markdown-body :deep(ul),
 .markdown-body :deep(ol) {
   margin-top: 0;
-  margin-bottom: 10px;
-  padding-left: 2em;
+  margin-bottom: 4px;
+  padding-left: 1.5em;
 }
 
 .markdown-body :deep(li) {
-  margin-top: 0.15em;
+  margin-top: 0.1em;
 }
 
 .markdown-body :deep(code) {

@@ -22,6 +22,7 @@ const renderMarkdown = (text: string) => {
 const query = ref('')
 const messages = ref<{role: string, content: string}[]>([])
 const loading = ref(false)
+const isReceivingStream = ref(false)
 const sessionId = ref<string | null>(null)
 const sessions = ref<any[]>([])
 const scrollContainer = ref<HTMLElement | null>(null)
@@ -74,22 +75,81 @@ const sendMessage = async () => {
   messages.value.push({ role: 'user', content: userMsg })
   query.value = ''
   loading.value = true
+  isReceivingStream.value = false
   scrollToBottom()
   
   try {
-    const res: any = await request.post('/chat', {
-      query: userMsg,
-      session_id: sessionId.value,
-      domain: 'bidding'
+    const token = localStorage.getItem('access_token')
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify({
+        query: userMsg,
+        session_id: sessionId.value,
+        domain: 'bidding'
+      })
     })
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        logout()
+        return
+      }
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const reader = response.body?.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let done = false
+    let isFirstChunk = true
+
+    while (reader && !done) {
+      const { value, done: readerDone } = await reader.read()
+      done = readerDone
+      if (value) {
+        const chunkStr = decoder.decode(value, { stream: true })
+        const lines = chunkStr.split('\n')
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              
+              if (data.type === 'meta') {
+                sessionId.value = data.session_id
+              } else if (data.type === 'chunk') {
+                if (isFirstChunk) {
+                  isReceivingStream.value = true // hide loading indicator when first chunk arrives
+                  messages.value.push({ role: 'assistant', content: data.chunk })
+                  isFirstChunk = false
+                } else {
+                  messages.value[messages.value.length - 1].content += data.chunk
+                }
+                scrollToBottom()
+              } else if (data.type === 'error') {
+                if (isFirstChunk) {
+                  isReceivingStream.value = true
+                  messages.value.push({ role: 'assistant', content: data.error })
+                  isFirstChunk = false
+                } else {
+                  messages.value[messages.value.length - 1].content += '\n\n' + data.error
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing stream data', e, line)
+            }
+          }
+        }
+      }
+    }
     
-    sessionId.value = res.session_id
-    messages.value.push({ role: 'assistant', content: res.answer })
-    scrollToBottom()
     await fetchHistory() // 刷新左侧会话列表
   } catch (error) {
-    messages.value.push({ role: 'assistant', content: '请求失败或超时，请稍后刷新或重试。' })
-    scrollToBottom()
+    console.error('Chat error:', error)
+    messages.value.push({ role: 'assistant', content: '请求失败或超时，请检查网络后重试。' })
   } finally {
     loading.value = false
   }
@@ -171,7 +231,7 @@ const sendMessage = async () => {
             <div class="message-content markdown-body" v-else v-html="renderMarkdown(msg.content)">
             </div>
           </div>
-          <div v-if="loading" class="message-wrapper assistant">
+          <div v-if="loading && !isReceivingStream" class="message-wrapper assistant">
             <div class="message-avatar">
               <BrandMark :size="24" />
             </div>
@@ -539,7 +599,7 @@ const sendMessage = async () => {
 /* --- Markdown Styles --- */
 .markdown-body {
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.2;
   color: #24292f;
 }
 
@@ -547,19 +607,19 @@ const sendMessage = async () => {
 .markdown-body :deep(h2),
 .markdown-body :deep(h3),
 .markdown-body :deep(h4) {
-  margin-top: 16px;
-  margin-bottom: 12px;
+  margin-top: 6px;
+  margin-bottom: 4px;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.15;
 }
 
-.markdown-body :deep(h1) { font-size: 1.75em; }
-.markdown-body :deep(h2) { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #hsla(210,18%,87%,1); }
-.markdown-body :deep(h3) { font-size: 1.25em; }
+.markdown-body :deep(h1) { font-size: 1.5em; }
+.markdown-body :deep(h2) { font-size: 1.3em; padding-bottom: 0.1em; border-bottom: 1px solid #hsla(210,18%,87%,1); }
+.markdown-body :deep(h3) { font-size: 1.1em; }
 
 .markdown-body :deep(p) {
   margin-top: 0;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
 .markdown-body :deep(a) {
@@ -574,12 +634,12 @@ const sendMessage = async () => {
 .markdown-body :deep(ul),
 .markdown-body :deep(ol) {
   margin-top: 0;
-  margin-bottom: 10px;
-  padding-left: 2em;
+  margin-bottom: 4px;
+  padding-left: 1.5em;
 }
 
 .markdown-body :deep(li) {
-  margin-top: 0.15em;
+  margin-top: 0.1em;
 }
 
 .markdown-body :deep(code) {
