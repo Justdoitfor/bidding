@@ -334,6 +334,7 @@ def process_milvus_file(file_path: str, table_type: str = None):
                 chunk_data["pub_date"] = (clean_string(row.get("pub_date")) or metadata.get("pub_date", ""))[:45]
                 chunk_data["purchaser"] = (clean_string(row.get("purchaser")) or metadata.get("purchaser", ""))[:250]
             elif table_type == "zhongbiao":
+                chunk_data["source"] = (clean_string(row.get("source")) or "")[:250]
                 chunk_data["category"] = (clean_string(row.get("category")) or metadata.get("industry", ""))[:95]
                 chunk_data["pub_date"] = (clean_string(row.get("pub_date")) or metadata.get("win_date", ""))[:45]
                 chunk_data["purchaser"] = (clean_string(row.get("purchaser")) or metadata.get("purchaser", ""))[:250]
