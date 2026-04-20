@@ -139,8 +139,8 @@ def process_mysql_file(file_path: str, table_type: str = None, db_session: Sessi
             elif table_type == "product":
                 obj = Product(
                     id=record_id, source=clean_string(row.get("source")),
-                    product_name=clean_string(row.get("product_name")), supplier=clean_string(row.get("supplier")),
-                    price=clean_decimal(row.get("price")), unit=clean_string(row.get("unit")),
+                    product_name=clean_string(row.get("product_name")), gather_time=clean_string(row.get("gather_time")),
+                    supplier=clean_string(row.get("supplier")), price=clean_decimal(row.get("price")),
                     supplier_address=clean_string(row.get("supplier_address")), province=clean_string(row.get("province")),
                     city=clean_string(row.get("city")), county=clean_string(row.get("county")),
                     contact_person=clean_string(row.get("contact_person")), contact_phone=clean_string(row.get("contact_phone")),
@@ -150,21 +150,23 @@ def process_mysql_file(file_path: str, table_type: str = None, db_session: Sessi
             elif table_type == "zhaobiao":
                 obj = Zhaobiao(
                     id=record_id, source=clean_string(row.get("source")),
+                    category=clean_string(row.get("category")), stage=clean_string(row.get("stage")),
                     title=clean_string(row.get("title")), project_name=clean_string(row.get("project_name")),
-                    project_num=clean_string(row.get("project_num")), purchaser=clean_string(row.get("purchaser")),
-                    agency=clean_string(row.get("agency")), budget=clean_decimal(row.get("budget")),
-                    stage=clean_string(row.get("stage")), address=clean_string(row.get("address")),
+                    project_num=clean_string(row.get("project_num")), pub_date=clean_string(row.get("pub_date")),
+                    purchaser=clean_string(row.get("purchaser")), agency=clean_string(row.get("agency")),
                     content=clean_string(row.get("content")), metadata_json=metadata_json
                 )
             elif table_type == "zhongbiao":
                 obj = Zhongbiao(
                     id=record_id, source=clean_string(row.get("source")),
+                    category=clean_string(row.get("category")), title=clean_string(row.get("title")),
                     project_name=clean_string(row.get("project_name")), project_num=clean_string(row.get("project_num")),
-                    purchaser=clean_string(row.get("purchaser")), agency=clean_string(row.get("agency")),
-                    winner=clean_string(row.get("winner")), win_amount=clean_decimal(row.get("win_amount")),
-                    win_date=clean_string(row.get("win_date")), province=clean_string(row.get("province")),
+                    pub_date=clean_string(row.get("pub_date")), purchaser=clean_string(row.get("purchaser")),
+                    agency=clean_string(row.get("agency")), winner=clean_string(row.get("winner")),
+                    win_amount=clean_decimal(row.get("win_amount")), win_date=clean_string(row.get("win_date")),
+                    address=clean_string(row.get("address")), province=clean_string(row.get("province")),
                     city=clean_string(row.get("city")), county=clean_string(row.get("county")),
-                    content=clean_string(row.get("content")), metadata_json=metadata_json
+                    metadata_json=metadata_json
                 )
             else:
                 continue
@@ -184,6 +186,58 @@ def process_mysql_file(file_path: str, table_type: str = None, db_session: Sessi
         if not db_session:
             db.close()
 
+def _parse_metadata_cell(val):
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return {}
+    if isinstance(val, dict):
+        return val
+    try:
+        parsed = json.loads(str(val))
+        if isinstance(parsed, dict):
+            return parsed
+        return {"raw_metadata": val}
+    except Exception:
+        return {"raw_metadata": val}
+
+def _build_company_chunk(row: dict) -> str:
+    business_scope = clean_string(row.get("business_scope")) or ""
+    return (
+        f"{clean_string(row.get('company_name')) or ''}，{clean_string(row.get('company_type')) or ''}，"
+        f"位于{clean_string(row.get('province')) or ''}{clean_string(row.get('city')) or ''}，"
+        f"行业：{clean_string(row.get('industry')) or ''}，状态：{clean_string(row.get('status')) or ''}，"
+        f"主营：{business_scope[:100]}"
+    )
+
+def _build_product_chunk(row: dict) -> str:
+    price = clean_string(row.get("price")) or ""
+    return (
+        f"产品：{clean_string(row.get('product_name')) or ''}，"
+        f"供应商：{clean_string(row.get('supplier')) or ''}，"
+        f"价格：{price}，"
+        f"地区：{clean_string(row.get('province')) or ''}{clean_string(row.get('city')) or ''}，"
+        f"参数：{(clean_string(row.get('product_params')) or '')[:200]}"
+    )
+
+def _build_zhaobiao_chunk(row: dict) -> str:
+    budget = clean_string(row.get("budget")) or ""
+    budget_text = f"预算{budget}万元" if budget and budget != "未知" else ""
+    return (
+        f"招标公告：{clean_string(row.get('title')) or ''}，"
+        f"采购方：{clean_string(row.get('purchaser')) or ''}，代理：{clean_string(row.get('agency')) or ''}，"
+        f"{clean_string(row.get('address')) or ''}，{budget_text}，发布：{clean_string(row.get('pub_date')) or ''}"
+    )
+
+def _build_zhongbiao_chunk(row: dict) -> str:
+    win_amount = clean_string(row.get("win_amount")) or ""
+    return (
+        f"中标结果：{clean_string(row.get('title')) or ''}，"
+        f"中标人：{clean_string(row.get('winner')) or ''}，"
+        f"中标金额：{win_amount}，"
+        f"采购方：{clean_string(row.get('purchaser')) or ''}，"
+        f"地区：{clean_string(row.get('province')) or ''}{clean_string(row.get('city')) or ''}，"
+        f"日期：{clean_string(row.get('win_date')) or clean_string(row.get('pub_date')) or ''}"
+    )
+
 def process_milvus_file(file_path: str, table_type: str = None):
     logger.info(f"Processing Milvus vector data from {file_path}...")
     try:
@@ -197,154 +251,140 @@ def process_milvus_file(file_path: str, table_type: str = None):
         if not table_type:
             logger.error(f"Could not detect table type from filename for {file_path}. Filename must include one of: company/law/product/zhaobiao/zhongbiao")
             return
-            
+
     logger.info(f"Detected table type for Milvus: {table_type}")
 
-    # Initialize LangChain semantic chunker with better overlap and separators for Chinese
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len,
-        separators=["\n\n", "\n", "。", "！", "？", "；", "，", " ", ""]
-    )
-
+    model = get_embedding_model()
     milvus_batch = []
     success_chunks = 0
-    
+
     def flush_milvus_batch():
-        if not milvus_batch: return
+        nonlocal success_chunks
+        if not milvus_batch:
+            return
         try:
             texts = [item["chunk_text"] for item in milvus_batch]
-            model = get_embedding_model()
             embeddings = model.encode(texts, normalize_embeddings=True).tolist()
             for i, item in enumerate(milvus_batch):
                 item["embedding"] = embeddings[i]
             insert_into_milvus(f"milvus_{table_type}", milvus_batch)
-            milvus_batch.clear()
+            success_chunks += len(milvus_batch)
         except Exception as e:
             logger.error(f"Milvus flush failed: {e}")
+        finally:
             milvus_batch.clear()
 
-    for index, row in df.iterrows():
-        doc_id = clean_string(row.get("id")) or str(uuid.uuid4())
-        
-        # If 'chunk_text' or 'core_text_for_bge_m3' exists, use it. Otherwise, build it from the row fields.
-        if "chunk_text" in row and pd.notnull(row["chunk_text"]):
-            raw_text = str(row["chunk_text"])
-        elif "core_text_for_bge_m3" in row and pd.notnull(row["core_text_for_bge_m3"]):
-            raw_text = str(row["core_text_for_bge_m3"])
-        else:
-            parts = []
-            for col in df.columns:
-                if col not in ['id', 'metadata', 'vector'] and pd.notnull(row[col]):
-                    parts.append(f"{col}: {row[col]}")
-            raw_text = "\n".join(parts)
-            if "metadata" in row and pd.notnull(row["metadata"]):
-                raw_text += f"\n附加信息：{row['metadata']}"
+    if table_type == "law":
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1200,
+            chunk_overlap=120,
+            length_function=len,
+            separators=["\n\n", "\n", "。", "！", "？", "；", "，", " ", ""],
+        )
 
-        # Smart extraction: isolate JSON metadata and core textual content safely
-        json_start = raw_text.rfind("{")
-        json_end = raw_text.rfind("}")
-        split_marker = "附加信息："
-        
-        metadata = {}
-        main_text = raw_text
+        for _, row in df.iterrows():
+            row_dict = row.to_dict()
+            doc_id = clean_string(row_dict.get("id")) or str(uuid.uuid4())
+            meta = _parse_metadata_cell(row_dict.get("metadata"))
+            title = clean_string(row_dict.get("title")) or ""
+            effective_date = clean_string(row_dict.get("effective_date")) or ""
+            chapter = clean_string(meta.get("chapter")) or ""
+            article = clean_string(meta.get("article")) or ""
 
-        # Only extract if it looks like a valid JSON dictionary at the end
-        if json_start != -1 and json_end != -1 and json_end > json_start:
-            meta_str = raw_text[json_start:json_end+1]
-            try:
-                metadata = json.loads(meta_str)
-                # If json loads successfully, strip it from the main text to prevent redundancy
-                if split_marker in raw_text[:json_start]:
-                    main_text = raw_text[:raw_text.rfind(split_marker)].strip()
-                else:
-                    main_text = raw_text[:json_start].strip()
-            except Exception:
-                # If it's not valid JSON, treat the whole thing as main_text to avoid data loss
-                metadata = {}
-                main_text = raw_text
+            content = clean_string(row_dict.get("content")) or ""
+            if not content:
+                content = title
 
-        # Augment main text with long fields from metadata if they are missing
-        if table_type == "company" and metadata.get("business_scope") and metadata.get("business_scope") not in main_text:
-            main_text += "\n经营范围: " + str(metadata.get("business_scope"))
-        if table_type == "law" and metadata.get("content") and len(main_text) < 200:
-            main_text += "\n正文: " + str(metadata.get("content"))
-        if table_type == "product" and metadata.get("product_params") and metadata.get("product_params") not in main_text:
-            main_text += "\n产品参数: " + str(metadata.get("product_params"))
-        if table_type in ["zhaobiao", "zhongbiao"]:
-            for key in ["content", "other_supplements", "specs"]:
-                if metadata.get(key) and str(metadata.get(key)) not in main_text:
-                    main_text += f"\n{key}: " + str(metadata.get(key))
+            chunks = text_splitter.split_text(content) or ["无详细内容"]
+            for chunk_idx, chunk_text in enumerate(chunks):
+                milvus_batch.append(
+                    {
+                        "id": f"{doc_id}_{chunk_idx}"[:95],
+                        "doc_id": str(doc_id)[:95],
+                        "chunk_index": int(chunk_idx),
+                        "chunk_text": f"{title}\n{chunk_text}"[:65000],
+                        "title": title[:250],
+                        "effective_date": effective_date[:45],
+                        "chapter": chapter[:250],
+                        "article": article[:250],
+                    }
+                )
+                if len(milvus_batch) >= 300:
+                    flush_milvus_batch()
 
-        # Extract semantic headers to prepend to each chunk
-        header_parts = []
+        flush_milvus_batch()
+        logger.info(f"Successfully processed and vectorized {success_chunks} chunks for milvus_{table_type}!")
+        return
+
+    for _, row in df.iterrows():
+        row_dict = row.to_dict()
+        doc_id = clean_string(row_dict.get("id")) or str(uuid.uuid4())
+
         if table_type == "company":
-            header_parts.append(f"企业名称: {metadata.get('company_name', '')}")
-            header_parts.append(f"法定代表人: {metadata.get('legal_rep', '')}")
-            header_parts.append(f"统一社会信用代码: {metadata.get('credit_code', '')}")
-        elif table_type == "law":
-            header_parts.append(f"法规标题: {metadata.get('title', '')}")
-            header_parts.append(f"发布日期: {metadata.get('pub_date', '')}")
+            chunk_text = _build_company_chunk(row_dict)
+            milvus_batch.append(
+                {
+                    "id": f"{doc_id}_0"[:95],
+                    "doc_id": str(doc_id)[:95],
+                    "chunk_index": 0,
+                    "chunk_text": chunk_text[:65000],
+                    "province": (clean_string(row_dict.get("province")) or "")[:45],
+                    "city": (clean_string(row_dict.get("city")) or "")[:45],
+                    "industry": (clean_string(row_dict.get("industry")) or "")[:95],
+                    "status": (clean_string(row_dict.get("status")) or "")[:45],
+                }
+            )
         elif table_type == "product":
-            header_parts.append(f"产品名称: {metadata.get('product_name', '')}")
-            header_parts.append(f"供应商: {metadata.get('supplier', '')}")
+            chunk_text = _build_product_chunk(row_dict)
+            milvus_batch.append(
+                {
+                    "id": f"{doc_id}_0"[:95],
+                    "doc_id": str(doc_id)[:95],
+                    "chunk_index": 0,
+                    "chunk_text": chunk_text[:65000],
+                    "province": (clean_string(row_dict.get("province")) or "")[:45],
+                    "city": (clean_string(row_dict.get("city")) or "")[:45],
+                    "price": float(clean_decimal(row_dict.get("price"))),
+                }
+            )
         elif table_type == "zhaobiao":
-            header_parts.append(f"招标项目: {metadata.get('project_name', metadata.get('title', ''))}")
-            header_parts.append(f"采购人: {metadata.get('purchaser', '')}")
+            chunk_text = _build_zhaobiao_chunk(row_dict)
+            milvus_batch.append(
+                {
+                    "id": f"{doc_id}_0"[:95],
+                    "doc_id": str(doc_id)[:95],
+                    "chunk_index": 0,
+                    "chunk_text": chunk_text[:65000],
+                    "address": (clean_string(row_dict.get("address")) or "")[:250],
+                    "category": (clean_string(row_dict.get("category")) or "")[:95],
+                    "budget": float(clean_decimal(row_dict.get("budget"))),
+                    "pub_date": (clean_string(row_dict.get("pub_date")) or "")[:45],
+                }
+            )
         elif table_type == "zhongbiao":
-            header_parts.append(f"中标项目: {metadata.get('project_name', metadata.get('title', ''))}")
-            header_parts.append(f"中标人: {metadata.get('winner', '')}")
-            header_parts.append(f"采购人: {metadata.get('purchaser', '')}")
-            
-        header_text = " | ".join([p for p in header_parts if p and not p.endswith(": ")])
-        if header_text:
-            header_text = f"[{header_text}]\n"
+            chunk_text = _build_zhongbiao_chunk(row_dict)
+            meta = _parse_metadata_cell(row_dict.get("metadata"))
+            zhaobiao_doc_id = clean_string(row_dict.get("zhaobiao_doc_id")) or clean_string(meta.get("zhaobiao_doc_id")) or ""
+            milvus_batch.append(
+                {
+                    "id": f"{doc_id}_0"[:95],
+                    "doc_id": str(doc_id)[:95],
+                    "chunk_index": 0,
+                    "chunk_text": chunk_text[:65000],
+                    "province": (clean_string(row_dict.get("province")) or "")[:45],
+                    "city": (clean_string(row_dict.get("city")) or "")[:45],
+                    "category": (clean_string(row_dict.get("category")) or "")[:95],
+                    "win_amount": float(clean_decimal(row_dict.get("win_amount"))),
+                    "winner": (clean_string(row_dict.get("winner")) or "")[:250],
+                    "purchaser": (clean_string(row_dict.get("purchaser")) or "")[:250],
+                    "zhaobiao_doc_id": str(zhaobiao_doc_id)[:95],
+                }
+            )
+        else:
+            continue
 
-        # Split long content into semantic chunks
-        chunks = text_splitter.split_text(main_text)
-        if not chunks:
-            chunks = ["无详细内容"]
-
-        for chunk_idx, chunk_text in enumerate(chunks):
-            # Context-aware embedding text: Header + Chunk
-            final_text = header_text + f"内容片段:\n{chunk_text}"
-
-            # Prepare metadata JSON based on the table type to support hybrid filtering
-            chunk_metadata = {}
-            if table_type == "company":
-                chunk_metadata["source"] = clean_string(row.get("source")) or ""
-            elif table_type == "law":
-                chunk_metadata["source"] = clean_string(row.get("source")) or ""
-                chunk_metadata["pub_date"] = clean_string(row.get("pub_date")) or metadata.get("pub_date", "")
-            elif table_type == "product":
-                chunk_metadata["source"] = clean_string(row.get("source")) or ""
-            elif table_type == "zhaobiao":
-                chunk_metadata["source"] = clean_string(row.get("source")) or ""
-                chunk_metadata["category"] = clean_string(row.get("category")) or metadata.get("industry", "")
-                chunk_metadata["pub_date"] = clean_string(row.get("pub_date")) or metadata.get("pub_date", "")
-                chunk_metadata["purchaser"] = clean_string(row.get("purchaser")) or metadata.get("purchaser", "")
-            elif table_type == "zhongbiao":
-                chunk_metadata["source"] = clean_string(row.get("source")) or ""
-                chunk_metadata["category"] = clean_string(row.get("category")) or metadata.get("industry", "")
-                chunk_metadata["pub_date"] = clean_string(row.get("pub_date")) or metadata.get("win_date", "")
-                chunk_metadata["purchaser"] = clean_string(row.get("purchaser")) or metadata.get("purchaser", "")
-
-            chunk_data = {
-                "id": f"{doc_id}_{chunk_idx}"[:95],
-                "doc_id": str(doc_id)[:95],
-                "chunk_index": int(chunk_idx),
-                "knowledge_base_id": "kb_default",
-                "chunk_text": final_text[:65000],
-                "metadata": chunk_metadata
-            }
-
-            milvus_batch.append(chunk_data)
-            success_chunks += 1
-            
-            if len(milvus_batch) >= 300:
-                flush_milvus_batch()
-                logger.info(f"Vectorized and inserted {success_chunks} chunks into Milvus...")
+        if len(milvus_batch) >= 300:
+            flush_milvus_batch()
 
     flush_milvus_batch()
     logger.info(f"Successfully processed and vectorized {success_chunks} chunks for milvus_{table_type}!")

@@ -1,6 +1,8 @@
 from pymilvus import Collection
 from sentence_transformers import SentenceTransformer
 from app.rag.vector_store import get_milvus_connection
+from app.models.database import SessionLocal
+from app.models.domain import Company, Law, Product, Zhaobiao, Zhongbiao
 import logging
 
 logger = logging.getLogger(__name__)
@@ -43,22 +45,54 @@ def retrieve_from_milvus(query: str, top_k: int = 5) -> list:
         
         all_results = []
         
+        mysql_model_by_collection = {
+            "milvus_company": Company,
+            "milvus_law": Law,
+            "milvus_product": Product,
+            "milvus_zhaobiao": Zhaobiao,
+            "milvus_zhongbiao": Zhongbiao,
+        }
+        sources_by_collection_and_doc_id = {}
+        db = SessionLocal()
+        try:
+            for col_name, model_cls in mysql_model_by_collection.items():
+                sources_by_collection_and_doc_id[col_name] = {}
+        finally:
+            db.close()
+
+        def hydrate_sources(results: list) -> None:
+            db = SessionLocal()
+            try:
+                doc_ids_by_collection = {}
+                for item in results:
+                    doc_ids_by_collection.setdefault(item["collection"], set()).add(item["doc_id"])
+
+                for col_name, doc_ids in doc_ids_by_collection.items():
+                    model_cls = mysql_model_by_collection.get(col_name)
+                    if not model_cls or not doc_ids:
+                        continue
+                    rows = db.query(model_cls).filter(model_cls.id.in_(list(doc_ids))).all()
+                    sources_by_collection_and_doc_id[col_name] = {r.id: (r.source or "") for r in rows}
+            finally:
+                db.close()
+
         for col_name in collections_to_search:
             try:
                 col = Collection(col_name)
                 col.load() # Load into memory before searching
                 
-                # Check schema to see if we're using the new unified schema with JSON metadata
                 schema_fields = [f.name for f in col.schema.fields]
-                
-                # We want to retrieve the core text back
-                if "chunk_text" in schema_fields and "metadata" in schema_fields:
-                    output_fields = ["chunk_text", "metadata"]
+                if "chunk_text" in schema_fields and "embedding" in schema_fields:
                     anns_field = "embedding"
+                    output_fields = ["doc_id", "chunk_text"]
+                    if col_name == "milvus_law":
+                        for f in ["title", "effective_date", "chapter", "article"]:
+                            if f in schema_fields:
+                                output_fields.append(f)
                 else:
-                    # Fallback for old schema
-                    output_fields = ["core_text_for_bge_m3"]
+                    # Fallback for older schema (should be removed after full reset)
                     anns_field = "vector"
+                    output_fields = ["doc_id", "core_text_for_bge_m3"]
                     if "source" in schema_fields:
                         output_fields.append("source")
 
@@ -76,26 +110,40 @@ def retrieve_from_milvus(query: str, top_k: int = 5) -> list:
                     for hit in hits:
                         if "chunk_text" in output_fields:
                             text = hit.entity.get("chunk_text")
-                            meta = hit.entity.get("metadata") or {}
-                            source = meta.get("source") or f"[{col_name}]"
+                            doc_id = hit.entity.get("doc_id")
+                            extra = {}
+                            if col_name == "milvus_law":
+                                extra = {
+                                    "title": hit.entity.get("title") if "title" in output_fields else None,
+                                    "effective_date": hit.entity.get("effective_date") if "effective_date" in output_fields else None,
+                                    "chapter": hit.entity.get("chapter") if "chapter" in output_fields else None,
+                                    "article": hit.entity.get("article") if "article" in output_fields else None,
+                                }
                         else:
                             text = hit.entity.get("core_text_for_bge_m3")
-                            source = hit.entity.get("source") if "source" in output_fields else f"[{col_name}]"
+                            doc_id = hit.entity.get("doc_id")
+                            extra = {}
                             
                         score = hit.score
-                        
-                        all_results.append({
+                        item = {
                             "collection": col_name,
+                            "doc_id": doc_id,
                             "text": text,
-                            "source": source,
-                            "score": score
-                        })
+                            "score": score,
+                        }
+                        if extra:
+                            item.update(extra)
+                        all_results.append(item)
             except Exception as e:
                 logger.warning(f"Failed to search collection {col_name}: {e}")
                 
         # Sort combined results by score descending and take top_k overall
         all_results.sort(key=lambda x: x["score"], reverse=True)
         top_results = all_results[:top_k]
+
+        hydrate_sources(top_results)
+        for item in top_results:
+            item["source"] = sources_by_collection_and_doc_id.get(item["collection"], {}).get(item["doc_id"], "") or f"[{item['collection']}]"
         
         return top_results
 

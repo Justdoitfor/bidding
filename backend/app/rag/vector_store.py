@@ -14,19 +14,13 @@ def get_milvus_connection():
         port=settings.MILVUS_PORT
     )
 
-def _get_unified_fields():
-    """
-    Returns the unified Milvus schema as defined in the architecture:
-    id, doc_id, chunk_index, knowledge_base_id, chunk_text, metadata (JSON), embedding
-    """
+def _get_base_fields():
     return [
         FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=100),
         FieldSchema(name="doc_id", dtype=DataType.VARCHAR, max_length=100),
         FieldSchema(name="chunk_index", dtype=DataType.INT64),
-        FieldSchema(name="knowledge_base_id", dtype=DataType.VARCHAR, max_length=50, default_value="kb_default"),
         FieldSchema(name="chunk_text", dtype=DataType.VARCHAR, max_length=65535),
-        FieldSchema(name="metadata", dtype=DataType.JSON),
-        FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=VECTOR_DIM)
+        FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=VECTOR_DIM),
     ]
 
 def create_milvus_collections():
@@ -34,35 +28,67 @@ def create_milvus_collections():
     
     # 1. milvus_company
     if not utility.has_collection("milvus_company"):
-        schema = CollectionSchema(_get_unified_fields(), description="Company Vector Table")
+        fields = _get_base_fields() + [
+            FieldSchema(name="province", dtype=DataType.VARCHAR, max_length=50),
+            FieldSchema(name="city", dtype=DataType.VARCHAR, max_length=50),
+            FieldSchema(name="industry", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="status", dtype=DataType.VARCHAR, max_length=50),
+        ]
+        schema = CollectionSchema(fields, description="Company Vector Table")
         col = Collection("milvus_company", schema)
         col.create_index("embedding", {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 8, "efConstruction": 64}})
         logger.info("Created collection: milvus_company")
         
     # 2. milvus_law
     if not utility.has_collection("milvus_law"):
-        schema = CollectionSchema(_get_unified_fields(), description="Law Vector Table")
+        fields = _get_base_fields() + [
+            FieldSchema(name="title", dtype=DataType.VARCHAR, max_length=255),
+            FieldSchema(name="effective_date", dtype=DataType.VARCHAR, max_length=50),
+            FieldSchema(name="chapter", dtype=DataType.VARCHAR, max_length=255),
+            FieldSchema(name="article", dtype=DataType.VARCHAR, max_length=255),
+        ]
+        schema = CollectionSchema(fields, description="Law Vector Table")
         col = Collection("milvus_law", schema)
         col.create_index("embedding", {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 8, "efConstruction": 64}})
         logger.info("Created collection: milvus_law")
 
     # 3. milvus_product
     if not utility.has_collection("milvus_product"):
-        schema = CollectionSchema(_get_unified_fields(), description="Product Vector Table")
+        fields = _get_base_fields() + [
+            FieldSchema(name="province", dtype=DataType.VARCHAR, max_length=50),
+            FieldSchema(name="city", dtype=DataType.VARCHAR, max_length=50),
+            FieldSchema(name="price", dtype=DataType.FLOAT),
+        ]
+        schema = CollectionSchema(fields, description="Product Vector Table")
         col = Collection("milvus_product", schema)
         col.create_index("embedding", {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 8, "efConstruction": 64}})
         logger.info("Created collection: milvus_product")
 
     # 4. milvus_zhaobiao
     if not utility.has_collection("milvus_zhaobiao"):
-        schema = CollectionSchema(_get_unified_fields(), description="Zhaobiao Vector Table")
+        fields = _get_base_fields() + [
+            FieldSchema(name="address", dtype=DataType.VARCHAR, max_length=255),
+            FieldSchema(name="category", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="budget", dtype=DataType.FLOAT),
+            FieldSchema(name="pub_date", dtype=DataType.VARCHAR, max_length=50),
+        ]
+        schema = CollectionSchema(fields, description="Zhaobiao Vector Table")
         col = Collection("milvus_zhaobiao", schema)
         col.create_index("embedding", {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 8, "efConstruction": 64}})
         logger.info("Created collection: milvus_zhaobiao")
 
     # 5. milvus_zhongbiao
     if not utility.has_collection("milvus_zhongbiao"):
-        schema = CollectionSchema(_get_unified_fields(), description="Zhongbiao Vector Table")
+        fields = _get_base_fields() + [
+            FieldSchema(name="province", dtype=DataType.VARCHAR, max_length=50),
+            FieldSchema(name="city", dtype=DataType.VARCHAR, max_length=50),
+            FieldSchema(name="category", dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name="win_amount", dtype=DataType.FLOAT),
+            FieldSchema(name="winner", dtype=DataType.VARCHAR, max_length=255),
+            FieldSchema(name="purchaser", dtype=DataType.VARCHAR, max_length=255),
+            FieldSchema(name="zhaobiao_doc_id", dtype=DataType.VARCHAR, max_length=100),
+        ]
+        schema = CollectionSchema(fields, description="Zhongbiao Vector Table")
         col = Collection("milvus_zhongbiao", schema)
         col.create_index("embedding", {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 8, "efConstruction": 64}})
         logger.info("Created collection: milvus_zhongbiao")

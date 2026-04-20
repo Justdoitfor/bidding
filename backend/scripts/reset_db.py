@@ -10,11 +10,12 @@ from app.models.database import Base
 from app.models.domain import User, Company, Law, Product, Zhaobiao, Zhongbiao, ChatSession, ChatMessage
 from app.core.config import settings
 from pymilvus import connections, utility
+from app.rag.vector_store import create_milvus_collections
 
 def reset_mysql():
     print("Resetting MySQL database...")
     # Construct the database URL using the individual settings
-    database_url = f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DB}"
+    database_url = f"mysql+mysqlconnector://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DB}"
     engine = create_engine(database_url)
     # Drop all tables and recreate them to match the latest schema
     Base.metadata.drop_all(bind=engine)
@@ -43,8 +44,9 @@ def reset_milvus():
             print(f"Dropped collection: {col}")
         else:
             print(f"Collection {col} does not exist, skipping.")
-            
-    print("Milvus collections reset successfully. They will be recreated upon next ingestion.")
+
+    create_milvus_collections()
+    print("Milvus collections reset successfully and recreated with the latest schema.")
 
 if __name__ == "__main__":
     reset_mysql()
