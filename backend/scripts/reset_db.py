@@ -2,7 +2,7 @@ import os
 import sys
 
 # Add backend directory to sys.path so we can import app modules
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__name__), "..")))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import create_engine
 from app.models.database import Base
