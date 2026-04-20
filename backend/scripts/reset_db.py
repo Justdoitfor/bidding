@@ -11,7 +11,9 @@ from pymilvus import connections, utility
 
 def reset_mysql():
     print("Resetting MySQL database...")
-    engine = create_engine(settings.DATABASE_URL)
+    # Construct the database URL using the individual settings
+    database_url = f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DB}"
+    engine = create_engine(database_url)
     # Drop all tables and recreate them to match the latest schema
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
