@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     # LLM & Embedding Settings
     QWEN_API_KEY: str = ""
     QWEN_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    QWEN_MODEL_NAME: str = "qwen-plus"
     SPARK_API_KEY: str = ""
     SPARK_APP_ID: str = ""
     SPARK_API_SECRET: str = ""

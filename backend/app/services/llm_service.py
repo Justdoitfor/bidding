@@ -7,7 +7,7 @@ def get_qwen_llm():
     Qwen is compatible with the OpenAI API format.
     """
     return ChatOpenAI(
-        model="qwen-plus",  # You can switch to qwen-turbo or qwen-max based on cost/performance
+        model=settings.QWEN_MODEL_NAME,  # e.g., "qwen-plus", "qwen-turbo", "qwen-max"
         api_key=settings.QWEN_API_KEY,
         base_url=settings.QWEN_BASE_URL,
         temperature=0.1, # Low temperature for more deterministic, factual answers in RAG
