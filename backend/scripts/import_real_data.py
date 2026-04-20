@@ -219,11 +219,11 @@ def process_milvus_file(file_path: str, table_type: str = None):
     def flush_milvus_batch():
         if not milvus_batch: return
         try:
-            texts = [item["core_text_for_bge_m3"] for item in milvus_batch]
+            texts = [item["chunk_text"] for item in milvus_batch]
             model = get_embedding_model()
             embeddings = model.encode(texts, normalize_embeddings=True).tolist()
             for i, item in enumerate(milvus_batch):
-                item["vector"] = embeddings[i]
+                item["embedding"] = embeddings[i]
             insert_into_milvus(f"milvus_{table_type}", milvus_batch)
             milvus_batch.clear()
         except Exception as e:
@@ -233,8 +233,10 @@ def process_milvus_file(file_path: str, table_type: str = None):
     for index, row in df.iterrows():
         doc_id = clean_string(row.get("id")) or str(uuid.uuid4())
         
-        # If 'core_text_for_bge_m3' exists, use it. Otherwise, build it from the row fields.
-        if "core_text_for_bge_m3" in row and pd.notnull(row["core_text_for_bge_m3"]):
+        # If 'chunk_text' or 'core_text_for_bge_m3' exists, use it. Otherwise, build it from the row fields.
+        if "chunk_text" in row and pd.notnull(row["chunk_text"]):
+            raw_text = str(row["chunk_text"])
+        elif "core_text_for_bge_m3" in row and pd.notnull(row["core_text_for_bge_m3"]):
             raw_text = str(row["core_text_for_bge_m3"])
         else:
             parts = []
@@ -313,31 +315,34 @@ def process_milvus_file(file_path: str, table_type: str = None):
             # Context-aware embedding text: Header + Chunk
             final_text = header_text + f"内容片段:\n{chunk_text}"
 
+            # Prepare metadata JSON based on the table type to support hybrid filtering
+            chunk_metadata = {}
+            if table_type == "company":
+                chunk_metadata["source"] = clean_string(row.get("source")) or ""
+            elif table_type == "law":
+                chunk_metadata["source"] = clean_string(row.get("source")) or ""
+                chunk_metadata["pub_date"] = clean_string(row.get("pub_date")) or metadata.get("pub_date", "")
+            elif table_type == "product":
+                chunk_metadata["source"] = clean_string(row.get("source")) or ""
+            elif table_type == "zhaobiao":
+                chunk_metadata["source"] = clean_string(row.get("source")) or ""
+                chunk_metadata["category"] = clean_string(row.get("category")) or metadata.get("industry", "")
+                chunk_metadata["pub_date"] = clean_string(row.get("pub_date")) or metadata.get("pub_date", "")
+                chunk_metadata["purchaser"] = clean_string(row.get("purchaser")) or metadata.get("purchaser", "")
+            elif table_type == "zhongbiao":
+                chunk_metadata["source"] = clean_string(row.get("source")) or ""
+                chunk_metadata["category"] = clean_string(row.get("category")) or metadata.get("industry", "")
+                chunk_metadata["pub_date"] = clean_string(row.get("pub_date")) or metadata.get("win_date", "")
+                chunk_metadata["purchaser"] = clean_string(row.get("purchaser")) or metadata.get("purchaser", "")
+
             chunk_data = {
                 "id": f"{doc_id}_{chunk_idx}"[:95],
                 "doc_id": str(doc_id)[:95],
                 "chunk_index": int(chunk_idx),
-                "core_text_for_bge_m3": final_text[:65000]
+                "knowledge_base_id": "kb_default",
+                "chunk_text": final_text[:65000],
+                "metadata": chunk_metadata
             }
-
-            # Map scalar fields from CSV columns (hybrid search attributes)
-            if table_type == "company":
-                chunk_data["source"] = (clean_string(row.get("source")) or "")[:250]
-            elif table_type == "law":
-                chunk_data["source"] = (clean_string(row.get("source")) or "")[:250]
-                chunk_data["pub_date"] = (clean_string(row.get("pub_date")) or metadata.get("pub_date", ""))[:45]
-            elif table_type == "product":
-                chunk_data["source"] = (clean_string(row.get("source")) or "")[:250]
-            elif table_type == "zhaobiao":
-                chunk_data["source"] = (clean_string(row.get("source")) or "")[:250]
-                chunk_data["category"] = (clean_string(row.get("category")) or metadata.get("industry", ""))[:95]
-                chunk_data["pub_date"] = (clean_string(row.get("pub_date")) or metadata.get("pub_date", ""))[:45]
-                chunk_data["purchaser"] = (clean_string(row.get("purchaser")) or metadata.get("purchaser", ""))[:250]
-            elif table_type == "zhongbiao":
-                chunk_data["source"] = (clean_string(row.get("source")) or "")[:250]
-                chunk_data["category"] = (clean_string(row.get("category")) or metadata.get("industry", ""))[:95]
-                chunk_data["pub_date"] = (clean_string(row.get("pub_date")) or metadata.get("win_date", ""))[:45]
-                chunk_data["purchaser"] = (clean_string(row.get("purchaser")) or metadata.get("purchaser", ""))[:250]
 
             milvus_batch.append(chunk_data)
             success_chunks += 1

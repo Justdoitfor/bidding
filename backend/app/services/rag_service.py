@@ -48,16 +48,23 @@ def retrieve_from_milvus(query: str, top_k: int = 5) -> list:
                 col = Collection(col_name)
                 col.load() # Load into memory before searching
                 
-                # Check schema to see if "source" field exists in this collection
+                # Check schema to see if we're using the new unified schema with JSON metadata
                 schema_fields = [f.name for f in col.schema.fields]
-                output_fields = ["core_text_for_bge_m3"]
-                if "source" in schema_fields:
-                    output_fields.append("source")
                 
                 # We want to retrieve the core text back
+                if "chunk_text" in schema_fields and "metadata" in schema_fields:
+                    output_fields = ["chunk_text", "metadata"]
+                    anns_field = "embedding"
+                else:
+                    # Fallback for old schema
+                    output_fields = ["core_text_for_bge_m3"]
+                    anns_field = "vector"
+                    if "source" in schema_fields:
+                        output_fields.append("source")
+
                 results = col.search(
                     data=[query_vector],
-                    anns_field="vector",
+                    anns_field=anns_field,
                     param=search_params,
                     limit=top_k,
                     expr=None,
@@ -67,9 +74,14 @@ def retrieve_from_milvus(query: str, top_k: int = 5) -> list:
                 # Parse results
                 for hits in results:
                     for hit in hits:
-                        # hit.entity.get returns the field value
-                        text = hit.entity.get("core_text_for_bge_m3")
-                        source = hit.entity.get("source") if "source" in output_fields else f"[{col_name}]"
+                        if "chunk_text" in output_fields:
+                            text = hit.entity.get("chunk_text")
+                            meta = hit.entity.get("metadata") or {}
+                            source = meta.get("source") or f"[{col_name}]"
+                        else:
+                            text = hit.entity.get("core_text_for_bge_m3")
+                            source = hit.entity.get("source") if "source" in output_fields else f"[{col_name}]"
+                            
                         score = hit.score
                         
                         all_results.append({
