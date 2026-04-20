@@ -14,6 +14,7 @@ class User(Base):
 class Company(Base):
     __tablename__ = "mysql_company"
     id = Column(String(50), primary_key=True, index=True)
+    content_hash = Column(String(64), index=True)
     source = Column(String(255))
     company_name = Column(String(255), index=True)
     legal_rep = Column(String(100))
@@ -37,6 +38,7 @@ class Company(Base):
 class Law(Base):
     __tablename__ = "mysql_law"
     id = Column(String(50), primary_key=True, index=True)
+    content_hash = Column(String(64), index=True)
     source = Column(String(255))
     title = Column(String(255), index=True)
     pub_date = Column(String(50))
@@ -47,6 +49,7 @@ class Law(Base):
 class Product(Base):
     __tablename__ = "mysql_product"
     id = Column(String(50), primary_key=True, index=True)
+    content_hash = Column(String(64), index=True)
     source = Column(String(255))
     product_name = Column(String(255), index=True)
     gather_time = Column(String(50))
@@ -65,6 +68,7 @@ class Product(Base):
 class Zhaobiao(Base):
     __tablename__ = "mysql_zhaobiao"
     id = Column(String(50), primary_key=True, index=True)
+    content_hash = Column(String(64), index=True)
     source = Column(String(255))
     category = Column(String(100))
     stage = Column(String(50))
@@ -82,6 +86,7 @@ class Zhaobiao(Base):
 class Zhongbiao(Base):
     __tablename__ = "mysql_zhongbiao"
     id = Column(String(50), primary_key=True, index=True)
+    content_hash = Column(String(64), index=True)
     source = Column(String(255))
     category = Column(String(100))
     title = Column(String(255), index=True)

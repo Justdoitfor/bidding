@@ -21,7 +21,10 @@ def _get_base_fields():
         FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=VECTOR_DIM),
     ]
 
-def create_milvus_collections():
+def _create_embedding_index(col: Collection):
+    col.create_index("embedding", {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 8, "efConstruction": 64}})
+
+def create_milvus_collections(create_index: bool = True):
     get_milvus_connection()
     
     # 1. milvus_company
@@ -34,7 +37,8 @@ def create_milvus_collections():
         ]
         schema = CollectionSchema(fields, description="Company Vector Table")
         col = Collection("milvus_company", schema)
-        col.create_index("embedding", {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 8, "efConstruction": 64}})
+        if create_index:
+            _create_embedding_index(col)
         logger.info("Created collection: milvus_company")
         
     # 2. milvus_law
@@ -47,7 +51,8 @@ def create_milvus_collections():
         ]
         schema = CollectionSchema(fields, description="Law Vector Table")
         col = Collection("milvus_law", schema)
-        col.create_index("embedding", {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 8, "efConstruction": 64}})
+        if create_index:
+            _create_embedding_index(col)
         logger.info("Created collection: milvus_law")
 
     # 3. milvus_product
@@ -59,7 +64,8 @@ def create_milvus_collections():
         ]
         schema = CollectionSchema(fields, description="Product Vector Table")
         col = Collection("milvus_product", schema)
-        col.create_index("embedding", {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 8, "efConstruction": 64}})
+        if create_index:
+            _create_embedding_index(col)
         logger.info("Created collection: milvus_product")
 
     # 4. milvus_zhaobiao
@@ -72,7 +78,8 @@ def create_milvus_collections():
         ]
         schema = CollectionSchema(fields, description="Zhaobiao Vector Table")
         col = Collection("milvus_zhaobiao", schema)
-        col.create_index("embedding", {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 8, "efConstruction": 64}})
+        if create_index:
+            _create_embedding_index(col)
         logger.info("Created collection: milvus_zhaobiao")
 
     # 5. milvus_zhongbiao
@@ -88,30 +95,47 @@ def create_milvus_collections():
         ]
         schema = CollectionSchema(fields, description="Zhongbiao Vector Table")
         col = Collection("milvus_zhongbiao", schema)
-        col.create_index("embedding", {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 8, "efConstruction": 64}})
+        if create_index:
+            _create_embedding_index(col)
         logger.info("Created collection: milvus_zhongbiao")
 
-def insert_into_milvus(collection_name: str, data: list):
+def drop_milvus_collections(collection_names: list[str]):
+    get_milvus_connection()
+    for name in collection_names:
+        if utility.has_collection(name):
+            utility.drop_collection(name)
+
+def build_milvus_indexes(collection_names: list[str]):
+    get_milvus_connection()
+    for name in collection_names:
+        if not utility.has_collection(name):
+            continue
+        col = Collection(name)
+        if not col.indexes:
+            _create_embedding_index(col)
+
+def insert_into_milvus(collection_name: str, data: list, upsert: bool = True, flush: bool = True):
     """
     data should be a list of dictionaries matching the collection schema.
     This function performs an upsert: deletes existing chunks for the given doc_ids, then inserts.
     """
     get_milvus_connection()
     col = Collection(collection_name)
-    col.load()
+    if upsert:
+        col.load()
     
     # Extract unique doc_ids from the batch to delete existing chunks
-    doc_ids = list(set([item["doc_id"] for item in data if "doc_id" in item]))
-    if doc_ids:
-        # Construct an IN expression for doc_ids
-        # Using string formatting carefully since doc_ids are strings
-        in_expr = ", ".join([f"'{d}'" for d in doc_ids])
-        delete_expr = f"doc_id in [{in_expr}]"
-        try:
-            col.delete(expr=delete_expr)
-            logger.info(f"Deleted existing vectors for {len(doc_ids)} docs in {collection_name}")
-        except Exception as e:
-            logger.warning(f"Delete before insert failed (might be empty collection): {e}")
+    if upsert:
+        doc_ids = list(set([item["doc_id"] for item in data if "doc_id" in item]))
+        if doc_ids:
+            in_expr = ", ".join([f"'{d}'" for d in doc_ids])
+            delete_expr = f"doc_id in [{in_expr}]"
+            try:
+                col.delete(expr=delete_expr)
+                logger.info(f"Deleted existing vectors for {len(doc_ids)} docs in {collection_name}")
+            except Exception as e:
+                logger.warning(f"Delete before insert failed (might be empty collection): {e}")
 
     col.insert(data)
-    col.flush()
+    if flush:
+        col.flush()
