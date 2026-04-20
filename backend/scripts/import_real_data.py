@@ -66,13 +66,40 @@ def read_data_file(file_path: str):
         raise ValueError("Unsupported file format.")
     return df.where(pd.notnull(df), None)
 
-def process_mysql_file(file_path: str, table_type: str, db_session: Session = None):
-    logger.info(f"Processing MySQL data from {file_path} into table {table_type}...")
+def detect_table_type(df: pd.DataFrame) -> str:
+    """
+    Automatically detect the table type based on the columns present in the DataFrame.
+    """
+    columns = set(df.columns)
+    
+    if "credit_code" in columns and "legal_rep" in columns:
+        return "company"
+    elif "effective_date" in columns and "pub_date" in columns and "title" in columns and "project_num" not in columns:
+        return "law"
+    elif "supplier" in columns and "price" in columns and "product_name" in columns:
+        return "product"
+    elif "purchaser" in columns and "budget" in columns and "project_name" in columns:
+        return "zhaobiao"
+    elif "winner" in columns and "win_amount" in columns and "project_name" in columns:
+        return "zhongbiao"
+    
+    return None
+
+def process_mysql_file(file_path: str, table_type: str = None, db_session: Session = None):
+    logger.info(f"Processing MySQL data from {file_path}...")
     try:
         df = read_data_file(file_path)
     except Exception as e:
         logger.error(f"Failed to read {file_path}: {e}")
         return
+
+    if not table_type:
+        table_type = detect_table_type(df)
+        if not table_type:
+            logger.error(f"Could not automatically detect table type for {file_path}. Missing required signature columns.")
+            return
+            
+    logger.info(f"Detected table type: {table_type}")
 
     # Use provided session or create a new one
     db = db_session if db_session else SessionLocal()
@@ -162,13 +189,21 @@ def process_mysql_file(file_path: str, table_type: str, db_session: Session = No
         if not db_session:
             db.close()
 
-def process_milvus_file(file_path: str, table_type: str):
-    logger.info(f"Processing Milvus vector data from {file_path} for {table_type}...")
+def process_milvus_file(file_path: str, table_type: str = None):
+    logger.info(f"Processing Milvus vector data from {file_path}...")
     try:
         df = read_data_file(file_path)
     except Exception as e:
         logger.error(f"Failed to read {file_path}: {e}")
         return
+
+    if not table_type:
+        table_type = detect_table_type(df)
+        if not table_type:
+            logger.error(f"Could not automatically detect table type for {file_path}. Missing required signature columns.")
+            return
+            
+    logger.info(f"Detected table type for Milvus: {table_type}")
 
     # Initialize LangChain semantic chunker with better overlap and separators for Chinese
     text_splitter = RecursiveCharacterTextSplitter(

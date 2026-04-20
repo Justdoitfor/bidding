@@ -21,13 +21,13 @@ class UploadResponse(BaseModel):
     status: str
     message: str
 
-def async_process_file(file_path: str, table_type: str):
-    logger.info(f"Background task started for {file_path} (table: {table_type})")
+def async_process_file(file_path: str):
+    logger.info(f"Background task started for {file_path} (auto-detecting type)")
     try:
-        # Process structural data to MySQL (Upsert)
-        process_mysql_file(file_path, table_type)
-        # Process unstructured data to Milvus (Semantic Chunking & Embedding)
-        process_milvus_file(file_path, table_type)
+        # Process structural data to MySQL (Upsert) - Auto detects table type
+        process_mysql_file(file_path)
+        # Process unstructured data to Milvus (Semantic Chunking & Embedding) - Auto detects table type
+        process_milvus_file(file_path)
         logger.info(f"Background task completed successfully for {file_path}")
     except Exception as e:
         logger.error(f"Background task failed for {file_path}: {e}")
@@ -39,15 +39,10 @@ def async_process_file(file_path: str, table_type: str):
 @router.post("/upload", response_model=UploadResponse)
 async def upload_document(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...), 
-    table_type: str = Form(...)
+    file: UploadFile = File(...)
 ):
     if not (file.filename.endswith('.csv') or file.filename.endswith('.xlsx') or file.filename.endswith('.json')):
         raise HTTPException(status_code=400, detail="Only CSV, XLSX, and JSON files are supported.")
-        
-    supported_types = ["company", "law", "product", "zhaobiao", "zhongbiao"]
-    if table_type not in supported_types:
-        raise HTTPException(status_code=400, detail=f"Unknown table type: {table_type}. Supported: {supported_types}")
 
     # Create temp directory
     temp_dir = "/tmp/bidding_uploads"
@@ -64,10 +59,10 @@ async def upload_document(
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
     # Add processing to background task
-    background_tasks.add_task(async_process_file, temp_file_path, table_type)
+    background_tasks.add_task(async_process_file, temp_file_path)
 
     return UploadResponse(
         filename=file.filename,
         status="processing",
-        message="File uploaded successfully. Ingestion into MySQL and Milvus is running in the background."
+        message="File uploaded successfully. System will automatically detect the data type and ingest it into MySQL and Milvus."
     )
