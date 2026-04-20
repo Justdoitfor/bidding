@@ -36,6 +36,10 @@ dependencies = [
 index-strategy = "unsafe-first-match"
 
 [[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
+[[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
-default = true
