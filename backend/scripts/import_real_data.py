@@ -66,27 +66,18 @@ def read_data_file(file_path: str):
         raise ValueError("Unsupported file format.")
     return df.where(pd.notnull(df), None)
 
-def detect_table_type(df: pd.DataFrame, filename: str = "") -> str:
-    """
-    Automatically detect the table type based on the columns present in the DataFrame.
-    """
-    columns = set(df.columns)
-    
-    if "credit_code" in columns or "legal_rep" in columns:
+def infer_table_type_from_filename(file_path: str) -> str:
+    filename = os.path.basename(file_path).lower()
+    if "company" in filename:
         return "company"
-    elif "effective_date" in columns or ("pub_date" in columns and "title" in columns and "project_num" not in columns):
+    if "law" in filename:
         return "law"
-    elif "supplier" in columns or "price" in columns or "product_name" in columns:
+    if "product" in filename:
         return "product"
-    elif "purchaser" in columns and "budget" in columns:
+    if "zhaobiao" in filename:
         return "zhaobiao"
-    elif "winner" in columns and "win_amount" in columns:
+    if "zhongbiao" in filename:
         return "zhongbiao"
-    elif "zhaobiao" in filename.lower():
-        return "zhaobiao"
-    elif "zhongbiao" in filename.lower():
-        return "zhongbiao"
-    
     return None
 
 def process_mysql_file(file_path: str, table_type: str = None, db_session: Session = None):
@@ -98,9 +89,9 @@ def process_mysql_file(file_path: str, table_type: str = None, db_session: Sessi
         return
 
     if not table_type:
-        table_type = detect_table_type(df, os.path.basename(file_path))
+        table_type = infer_table_type_from_filename(file_path)
         if not table_type:
-            logger.error(f"Could not automatically detect table type for {file_path}. Missing required signature columns.")
+            logger.error(f"Could not detect table type from filename for {file_path}. Filename must include one of: company/law/product/zhaobiao/zhongbiao")
             return
             
     logger.info(f"Detected table type: {table_type}")
@@ -202,9 +193,9 @@ def process_milvus_file(file_path: str, table_type: str = None):
         return
 
     if not table_type:
-        table_type = detect_table_type(df, os.path.basename(file_path))
+        table_type = infer_table_type_from_filename(file_path)
         if not table_type:
-            logger.error(f"Could not automatically detect table type for {file_path}. Missing required signature columns.")
+            logger.error(f"Could not detect table type from filename for {file_path}. Filename must include one of: company/law/product/zhaobiao/zhongbiao")
             return
             
     logger.info(f"Detected table type for Milvus: {table_type}")
@@ -376,20 +367,17 @@ def process_directory(dir_path: str):
         if matched_type and lower_name.endswith((".csv", ".xlsx", ".xls", ".json")):
             file_path = os.path.join(dir_path, filename)
             
-            # strict routing based on prefix
             if lower_name.startswith("mysql_"):
                 logger.info(f"Found MySQL target file: {filename}")
                 process_mysql_file(file_path, matched_type)
-                found_files = True
             elif lower_name.startswith("milvus_"):
                 logger.info(f"Found Milvus target file: {filename}")
                 process_milvus_file(file_path, matched_type)
-                found_files = True
             else:
-                logger.info(f"Found generic target file: {filename}, processing for both MySQL and Milvus")
+                logger.info(f"Found target file: {filename}, processing for both MySQL and Milvus")
                 process_mysql_file(file_path, matched_type)
                 process_milvus_file(file_path, matched_type)
-                found_files = True
+            found_files = True
             
     if not found_files:
         logger.warning(f"No valid files found. Files must contain a supported type keyword.")
