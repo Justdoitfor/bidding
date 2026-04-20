@@ -55,8 +55,6 @@ router.beforeEach((to) => {
   }
 
   const token = localStorage.getItem('access_token')
-  const userRaw = localStorage.getItem('current_user')
-  const user = userRaw ? JSON.parse(userRaw) : null
 
   if (isAuthRoute) {
     if (token) return { path: '/' }

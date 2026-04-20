@@ -2,8 +2,22 @@
 import { ref, onMounted, nextTick } from 'vue'
 import request from '../api/request'
 import BrandMark from '../components/BrandMark.vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 const currentUser = ref(JSON.parse(localStorage.getItem('current_user') || '{}'))
+
+// Configure marked to use breaks for newlines
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
+
+const renderMarkdown = (text: string) => {
+  if (!text) return ''
+  const rawHtml = marked(text) as string
+  return DOMPurify.sanitize(rawHtml)
+}
 
 const query = ref('')
 const messages = ref<{role: string, content: string}[]>([])
@@ -150,8 +164,10 @@ const sendMessage = async () => {
             <div class="message-avatar" v-if="msg.role === 'assistant'">
               <BrandMark :size="24" />
             </div>
-            <div class="message-content">
+            <div class="message-content" v-if="msg.role === 'user'">
               {{ msg.content }}
+            </div>
+            <div class="message-content markdown-body" v-else v-html="renderMarkdown(msg.content)">
             </div>
           </div>
           <div v-if="loading" class="message-wrapper assistant">
@@ -517,6 +533,108 @@ const sendMessage = async () => {
 .assistant .message-content {
   background-color: #ffffff;
   padding: 8px 0;
+}
+
+/* --- Markdown Styles --- */
+.markdown-body {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #24292f;
+}
+
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4) {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-body :deep(h1) { font-size: 2em; }
+.markdown-body :deep(h2) { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #hsla(210,18%,87%,1); }
+.markdown-body :deep(h3) { font-size: 1.25em; }
+
+.markdown-body :deep(p) {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-body :deep(a) {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.markdown-body :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  margin-top: 0;
+  margin-bottom: 16px;
+  padding-left: 2em;
+}
+
+.markdown-body :deep(li) {
+  margin-top: 0.25em;
+}
+
+.markdown-body :deep(code) {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(175,184,193,0.2);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+}
+
+.markdown-body :deep(pre) {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-body :deep(pre code) {
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  word-break: normal;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+}
+
+.markdown-body :deep(blockquote) {
+  margin: 0 0 16px 0;
+  padding: 0 1em;
+  color: #57606a;
+  border-left: 0.25em solid #d0d7de;
+}
+
+.markdown-body :deep(table) {
+  border-spacing: 0;
+  border-collapse: collapse;
+  margin-top: 0;
+  margin-bottom: 16px;
+  width: 100%;
+  overflow: auto;
+}
+
+.markdown-body :deep(table th),
+.markdown-body :deep(table td) {
+  padding: 6px 13px;
+  border: 1px solid #d0d7de;
+}
+
+.markdown-body :deep(table tr:nth-child(2n)) {
+  background-color: #f6f8fa;
 }
 
 /* --- Input Area --- */
