@@ -3,20 +3,30 @@ from sentence_transformers import SentenceTransformer
 from app.rag.vector_store import get_milvus_connection
 from app.models.database import SessionLocal
 from app.models.domain import Company, Law, Product, Zhaobiao, Zhongbiao
+from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
 # Global model instance for efficiency
 _embed_model = None
+_collection_cache = {}
 
 def get_embedding_model():
     """Lazy load the BAAI/bge-m3 model to save memory until needed."""
     global _embed_model
     if _embed_model is None:
         logger.info("Loading BAAI/bge-m3 embedding model for retrieval...")
-        _embed_model = SentenceTransformer("BAAI/bge-m3")
+        _embed_model = SentenceTransformer(settings.BGE_M3_MODEL_PATH)
     return _embed_model
+
+def get_milvus_collection(name: str) -> Collection:
+    col = _collection_cache.get(name)
+    if col is None:
+        col = Collection(name)
+        col.load()
+        _collection_cache[name] = col
+    return col
 
 def retrieve_from_milvus(query: str, top_k: int = 5) -> list:
     """
@@ -78,8 +88,7 @@ def retrieve_from_milvus(query: str, top_k: int = 5) -> list:
 
         for col_name in collections_to_search:
             try:
-                col = Collection(col_name)
-                col.load() # Load into memory before searching
+                col = get_milvus_collection(col_name)
                 
                 schema_fields = [f.name for f in col.schema.fields]
                 if "chunk_text" in schema_fields and "embedding" in schema_fields:

@@ -13,6 +13,7 @@ services:
       - backend-venv:/app/.venv
       # 外部真实数据挂载目录，可通过设置环境变量 EXTERNAL_DATA_DIR 来修改路径 
       - ${EXTERNAL_DATA_DIR:-./data}:/data
+      - huggingface-cache:/root/.cache/huggingface
     environment:
       - MYSQL_HOST=mysql
       - REDIS_URL=redis://redis:6379/0
@@ -20,6 +21,7 @@ services:
       - UV_LINK_MODE=copy
       - UV_PYTHON=3.12
       - UV_SYSTEM_PYTHON=1
+      - HF_HOME=/root/.cache/huggingface
     command: ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-exclude", "*.db", "--reload-exclude", "*.db-journal", "--reload-exclude", "*.sqlite3"]
     depends_on:
       - mysql
@@ -116,6 +118,7 @@ volumes:
   minio-data:
   frontend-node-modules:
   backend-venv:
+  huggingface-cache:
 
 networks:
   bidding-net:

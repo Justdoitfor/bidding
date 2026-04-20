@@ -8,11 +8,9 @@ logger = logging.getLogger(__name__)
 VECTOR_DIM = 1024
 
 def get_milvus_connection():
-    connections.connect(
-        alias="default", 
-        host=settings.MILVUS_HOST, 
-        port=settings.MILVUS_PORT
-    )
+    if connections.has_connection("default"):
+        return
+    connections.connect(alias="default", host=settings.MILVUS_HOST, port=settings.MILVUS_PORT)
 
 def _get_base_fields():
     return [

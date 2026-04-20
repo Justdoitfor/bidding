@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routers import chat, document, auth, users
 from app.core.config import settings
+from app.services.rag_service import get_embedding_model
+from app.rag.vector_store import get_milvus_connection
+from pymilvus import Collection
 
 app = FastAPI(
     title="招投标信息智能问答平台 API",
@@ -23,6 +26,22 @@ app.include_router(chat, prefix="/api/v1/chat", tags=["Chat"])
 app.include_router(document, prefix="/api/v1/documents", tags=["Documents"])
 app.include_router(auth, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(users, prefix="/api/v1/users", tags=["Users"])
+
+@app.on_event("startup")
+def warmup():
+    try:
+        get_milvus_connection()
+    except Exception:
+        pass
+    try:
+        get_embedding_model()
+    except Exception:
+        pass
+    for name in ["milvus_company", "milvus_law", "milvus_product", "milvus_zhaobiao", "milvus_zhongbiao"]:
+        try:
+            Collection(name).load()
+        except Exception:
+            pass
 
 @app.get("/")
 async def root():

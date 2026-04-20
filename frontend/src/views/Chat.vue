@@ -88,7 +88,8 @@ const sendMessage = async () => {
     scrollToBottom()
     await fetchHistory() // 刷新左侧会话列表
   } catch (error) {
-    messages.value.pop()
+    messages.value.push({ role: 'assistant', content: '请求失败或超时，请稍后刷新或重试。' })
+    scrollToBottom()
   } finally {
     loading.value = false
   }
