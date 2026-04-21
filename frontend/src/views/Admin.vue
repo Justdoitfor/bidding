@@ -1088,8 +1088,6 @@
 
 import { ref } from 'vue'
 
-const currentUser = ref(JSON.parse(localStorage.getItem('admin_current_user') || '{}'))
-
 const currentView = ref('dashboard')
 const currentSettingsTab = ref('model')
 
@@ -1104,24 +1102,6 @@ const modals = ref<Record<string, boolean>>({
 })
 
 const toast = ref({ visible: false, msg: '', type: 'info' })
-
-const viewMeta: Record<string, any> = {
-  dashboard:{ title:'仪表盘', sub:'平台运行状态总览' },
-  kb:       { title:'知识库管理', sub:'向量索引与文档知识库' },
-  docs:     { title:'文档处理', sub:'上传、解析与入库进度' },
-  analytics:{ title:'数据分析', sub:'查询统计、性能与成本' },
-  users:    { title:'用户管理', sub:'账号权限与知识库访问控制' },
-  settings: { title:'系统设置', sub:'模型、检索参数与 API' },
-}
-
-const topbarRights: Record<string, any> = {
-  dashboard: `<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text0)"><span style="width:7px;height:7px;border-radius:50%;background:var(--text0);display:inline-block;"></span>推理服务正常</div><button class="btn" onclick="document.dispatchEvent(new CustomEvent('open-modal', {detail: 'notifyModal'}))">🔔 通知</button><button class="btn primary">导出报告</button>`,
-  kb: `<button class="btn">全部重建索引</button><button class="btn primary" onclick="document.dispatchEvent(new CustomEvent('open-modal', {detail: 'newKbModal'}))">+ 新建知识库</button>`,
-  docs: `<button class="btn" onclick="document.dispatchEvent(new CustomEvent('show-toast', {detail: '重试任务已提交'}))">重试失败任务</button><button class="btn primary" onclick="document.dispatchEvent(new CustomEvent('open-modal', {detail: 'uploadModal'}))">上传文件</button>`,
-  analytics: `<select class="form-select" style="width:110px;padding:5px 10px;font-size:12px"><option>近7天</option><option>近30天</option></select><button class="btn primary">导出报告</button>`,
-  users: `<button class="btn">导入用户</button><button class="btn primary" onclick="document.dispatchEvent(new CustomEvent('open-modal', {detail: 'newUserModal'}))">+ 新建用户</button>`,
-  settings: `<button class="btn">恢复默认</button><button class="btn primary" onclick="document.dispatchEvent(new CustomEvent('show-toast', {detail: '配置已保存'}))">保存配置</button>`,
-}
 
 const gotoView = (name: string) => { currentView.value = name }
 const switchTab = (name: string) => { currentSettingsTab.value = name }
@@ -1141,8 +1121,6 @@ const fakeFileSelect = () => {
     size: `${(Math.random()*10+1).toFixed(1)} MB`
   })
 }
-const removeFile = (index: number) => { fileList.value.splice(index, 1) }
-
 const genPwd = (e: any) => {
   const chars='ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!'
   let p=''
@@ -1153,13 +1131,6 @@ const genPwd = (e: any) => {
 const showGeneratedKey = () => {
   modals.value.newApiKeyModal = false
   modals.value.keyResultModal = true
-}
-
-const logout = () => {
-console.log(currentUser, viewMeta, topbarRights, removeFile, logout);
-  localStorage.removeItem('admin_access_token')
-  localStorage.removeItem('admin_current_user')
-  window.location.href = '/admin/login'
 }
 
 window.addEventListener('open-modal', (e: any) => { modals.value[e.detail] = true })
@@ -1194,8 +1165,9 @@ const removeParent = (e: any) => {
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=Noto+Sans+SC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap');
 
-:root{
-  --bg: #ffffff;
+/* DESIGN.md grayscale theme + keep original layout */
+.admin-wrapper{
+  --bg: #fafafa;
   --bg1: #ffffff;
   --bg2: #fafafa;
   --bg3: #e5e5e5;
@@ -1227,10 +1199,15 @@ const removeParent = (e: any) => {
   --shadow-lg: none;
   --sidebar: 220px;
   --header: 52px;
+
+  font-size: 14px;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text0);
+  font-family: var(--sans);
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{font-size:14px}
-body{background:var(--bg);color:var(--text0);font-family:var(--sans);height:100vh;overflow:hidden}
 
 /* ── Layout ── */
 .layout{display:flex;height:100vh}
@@ -1325,8 +1302,7 @@ body{background:var(--bg);color:var(--text0);font-family:var(--sans);height:100v
 .content{flex:1;overflow-y:auto;padding:24px}
 
 /* ── Views ── */
-.view{display:none}
-.view.active{display:block}
+.view{display:block}
 
 /* ── Cards ── */
 .card{background:var(--bg1);border:1px solid var(--border);border-radius: 12px;padding:20px;box-shadow:var(--shadow)}
@@ -1394,14 +1370,14 @@ body{background:var(--bg);color:var(--text0);font-family:var(--sans);height:100v
   width:100%;
 }
 .form-input:focus,.form-select:focus,.form-textarea:focus{
-  border-color:rgba(37,99,235,.4);
+  border-color:var(--text0);
 }
 .form-textarea{resize:vertical;min-height:80px;line-height:1.6}
 .form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a837a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px;cursor:pointer}
 .form-hint{font-size:11px;color:var(--text3)}
 .form-divider{border:none;border-top:1px solid var(--border);margin:4px 0}
 .input-prefix{display:flex;align-items:stretch;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .15s,box-shadow .15s}
-.input-prefix:focus-within{border-color:rgba(37,99,235,.4);box-shadow:0 0 0 3px rgba(37,99,235,.07)}
+.input-prefix:focus-within{border-color:var(--text0)}
 .prefix-tag{padding:8px 12px;background:var(--bg2);color:var(--text2);font-size:12px;font-family:var(--mono);border-right:1px solid var(--border);white-space:nowrap;display:flex;align-items:center}
 .input-prefix .form-input{border:none;border-radius: 9999px;box-shadow:none!important}
 
@@ -1443,7 +1419,7 @@ body{background:var(--bg);color:var(--text0);font-family:var(--sans);height:100v
   border:2px dashed var(--border);border-radius:var(--r-xl);padding:36px;
   text-align:center;cursor:pointer;transition:all .18s;background:var(--bg);
 }
-.upload-zone:hover{border-color:rgba(37,99,235,.4);background:var(--accent-l)}
+.upload-zone:hover{border-color:var(--text0);background:var(--accent-l)}
 .upload-icon{font-size:36px;margin-bottom:10px;display:block}
 .upload-text{font-size:14px;color:var(--text1);font-weight:500}
 .upload-sub{font-size:12px;color:var(--text2);margin-top:4px}
@@ -1460,20 +1436,19 @@ body{background:var(--bg);color:var(--text0);font-family:var(--sans);height:100v
 .chart-svg{display:block;width:100%;overflow:visible}
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:4px}
-::-webkit-scrollbar-thumb:hover{background:var(--border-h)}
+.content::-webkit-scrollbar,.nav::-webkit-scrollbar,.modal-body::-webkit-scrollbar{width:4px;height:4px}
+.content::-webkit-scrollbar-track,.nav::-webkit-scrollbar-track,.modal-body::-webkit-scrollbar-track{background:transparent}
+.content::-webkit-scrollbar-thumb,.nav::-webkit-scrollbar-thumb,.modal-body::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:4px}
+.content::-webkit-scrollbar-thumb:hover,.nav::-webkit-scrollbar-thumb:hover,.modal-body::-webkit-scrollbar-thumb:hover{background:var(--border-h)}
 
 /* ══════════════════════════════════════
    MODAL SYSTEM
 ══════════════════════════════════════ */
 .overlay{
   position:fixed;inset:0;background:rgba(26,23,20,.35);backdrop-filter:blur(4px);
-  z-index:100;display:none;align-items:center;justify-content:center;padding:20px;
+  z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;
   animation:fadeIn .18s ease;
 }
-.overlay.show{display:flex}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
 .modal{

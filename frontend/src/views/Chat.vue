@@ -345,40 +345,47 @@ const formatDate = (dateStr: string) => {
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=Noto+Sans+SC:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap');
 
-:root {
-  --bg:      #f5f4f0;
+/* DESIGN.md grayscale theme + keep original layout */
+.chat-wrapper{
+  --bg:      #fafafa;
   --bg1:     #ffffff;
-  --bg2:     #f0ede8;
-  --bg3:     #e8e4de;
-  --border:  #e2ddd7;
-  --border-h:#c8c2ba;
-  --text0:   #1a1714;
-  --text1:   #4a4540;
-  --text2:   #8a837a;
-  --text3:   #b8b2aa;
-  --accent:  #2563eb;
-  --accent-h:#1d4ed8;
-  --accent-l:#eff6ff;
-  --accent2: #059669;
-  --accent2-l:#f0fdf4;
-  --warn:    #d97706;
-  --sans:    'DM Sans', 'Noto Sans SC', sans-serif;
-  --mono:    'JetBrains Mono', monospace;
-  --r:       8px;
+  --bg2:     #fafafa;
+  --bg3:     #e5e5e5;
+  --border:  #e5e5e5;
+  --border-h:#d4d4d4;
+  --text0:   #000000;
+  --text1:   #262626;
+  --text2:   #525252;
+  --text3:   #737373;
+  --accent:  #000000;
+  --accent-h:#262626;
+  --accent-l:#fafafa;
+  --accent2: #000000;
+  --accent2-l:#fafafa;
+  --warn:    #000000;
+  --sans:    'SF Pro Rounded', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono:    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --r:       12px;
   --r-lg:    12px;
-  --shadow:  0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+  --shadow:  none;
+  --shadow-md: none;
+
+  font-size:14px;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--text0);
+  font-family:var(--sans);
 }
 
 *{margin:0;padding:0;box-sizing:border-box}
-html{font-size:14px}
-body{background:var(--bg);color:var(--text0);font-family:var(--sans);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
 /* ── Header ── */
 .header{
   height:52px;background:var(--bg1);border-bottom:1px solid var(--border);
   display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0;
-  
 }
 .logo{display:flex;align-items:center;gap:10px}
 .logo-mark{
@@ -399,7 +406,7 @@ body{background:var(--bg);color:var(--text0);font-family:var(--sans);height:100v
   user-select:none;
 }
 .kb-pill:hover{border-color:var(--border-h);color:var(--text1)}
-.kb-pill.on{background:var(--bg2);border-color:rgba(37,99,235,.25);color:var(--text0);font-weight:500}
+.kb-pill.on{background:var(--bg1);border-color:var(--text0);color:var(--text0);font-weight:500}
 .kb-pill-dot{width:6px;height:6px;border-radius: 9999px;align-items:center;gap:10px;margin-left:auto}
 .avatar-btn{
   width:32px;height:32px;border-radius:50%;
@@ -534,7 +541,7 @@ body{background:var(--bg);color:var(--text0);font-family:var(--sans);height:100v
   cursor:pointer;display:flex;align-items:center;justify-content:center;
   color:#fff;flex-shrink:0;transition:all .15s;
 }
-.send-btn:hover{background:var(--accent-h);transform:scale(1.04)}
+.send-btn:hover{background:var(--accent-h)}
 .send-btn svg{width:15px;height:15px}
 
 .input-meta{display:flex;align-items:center;gap:2px;margin-top:8px}
@@ -547,14 +554,14 @@ body{background:var(--bg);color:var(--text0);font-family:var(--sans);height:100v
 .mode-tag{
   margin-left:auto;font-size:10px;font-family:var(--mono);
   padding:2px 8px;border-radius:4px;background:var(--bg2);color:var(--text0);
-  border:1px solid rgba(37,99,235,.15);
+  border:1px solid var(--border);
 }
 
 /* ── Scrollbar ── */
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:4px}
-::-webkit-scrollbar-thumb:hover{background:var(--border-h)}
+.messages::-webkit-scrollbar,.hist-list::-webkit-scrollbar,.chunk-list::-webkit-scrollbar{width:4px;height:4px}
+.messages::-webkit-scrollbar-track,.hist-list::-webkit-scrollbar-track,.chunk-list::-webkit-scrollbar-track{background:transparent}
+.messages::-webkit-scrollbar-thumb,.hist-list::-webkit-scrollbar-thumb,.chunk-list::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:4px}
+.messages::-webkit-scrollbar-thumb:hover,.hist-list::-webkit-scrollbar-thumb:hover,.chunk-list::-webkit-scrollbar-thumb:hover{background:var(--border-h)}
 
 /* ── Right panel: chunk viewer (slide-in) ── */
 .chunk-panel{
@@ -590,8 +597,6 @@ body{background:var(--bg);color:var(--text0);font-family:var(--sans);height:100v
 }
 .chunk-text{font-size:12px;color:var(--text1);line-height:1.65}
 .chunk-meta{font-size:10px;color:var(--text3);margin-top:6px;font-family:var(--mono)}
-
-.chat-wrapper { height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); color: var(--text0); font-family: var(--sans); }
 .markdown-body { font-size: 14.5px; line-height: 1.6; }
 .markdown-body :deep(h1), .markdown-body :deep(h2), .markdown-body :deep(h3) { margin-top: 1.5em; margin-bottom: 0.5em; font-family: var(--sans); font-weight: 500; }
 .markdown-body :deep(p) { margin-bottom: 1em; }
