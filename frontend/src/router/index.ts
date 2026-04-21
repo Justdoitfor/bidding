@@ -4,8 +4,6 @@ import Admin from '../views/Admin.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import AdminLogin from '../views/AdminLogin.vue'
-import KnowledgeBase from '../views/KnowledgeBase.vue'
-import DocumentList from '../views/DocumentList.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,24 +31,7 @@ const router = createRouter({
     {
       path: '/admin',
       name: 'admin',
-      component: Admin,
-      children: [
-        {
-          path: '',
-          name: 'admin-dashboard',
-          component: () => import('../views/AdminDashboard.vue')
-        },
-        {
-          path: 'kb',
-          name: 'knowledge-base',
-          component: KnowledgeBase
-        },
-        {
-          path: 'documents',
-          name: 'documents',
-          component: DocumentList
-        }
-      ]
+      component: Admin
     }
   ]
 })
