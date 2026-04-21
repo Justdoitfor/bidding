@@ -2,12 +2,27 @@
 import { ref, onMounted, nextTick } from 'vue'
 import request from '../api/request'
 import BrandMark from '../components/BrandMark.vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 const currentUser = ref(JSON.parse(localStorage.getItem('current_user') || '{}'))
+
+// Configure marked to use breaks for newlines
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
+
+const renderMarkdown = (text: string) => {
+  if (!text) return ''
+  const rawHtml = marked(text) as string
+  return DOMPurify.sanitize(rawHtml)
+}
 
 const query = ref('')
 const messages = ref<{role: string, content: string}[]>([])
 const loading = ref(false)
+const isReceivingStream = ref(false)
 const sessionId = ref<string | null>(null)
 const sessions = ref<any[]>([])
 const scrollContainer = ref<HTMLElement | null>(null)
@@ -60,21 +75,81 @@ const sendMessage = async () => {
   messages.value.push({ role: 'user', content: userMsg })
   query.value = ''
   loading.value = true
+  isReceivingStream.value = false
   scrollToBottom()
   
   try {
-    const res: any = await request.post('/chat', {
-      query: userMsg,
-      session_id: sessionId.value,
-      domain: 'bidding'
+    const token = localStorage.getItem('access_token')
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify({
+        query: userMsg,
+        session_id: sessionId.value,
+        domain: 'bidding'
+      })
     })
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        logout()
+        return
+      }
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const reader = response.body?.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let done = false
+    let isFirstChunk = true
+
+    while (reader && !done) {
+      const { value, done: readerDone } = await reader.read()
+      done = readerDone
+      if (value) {
+        const chunkStr = decoder.decode(value, { stream: true })
+        const lines = chunkStr.split('\n')
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              
+              if (data.type === 'meta') {
+                sessionId.value = data.session_id
+              } else if (data.type === 'chunk') {
+                if (isFirstChunk) {
+                  isReceivingStream.value = true // hide loading indicator when first chunk arrives
+                  messages.value.push({ role: 'assistant', content: data.chunk })
+                  isFirstChunk = false
+                } else {
+                  messages.value[messages.value.length - 1].content += data.chunk
+                }
+                scrollToBottom()
+              } else if (data.type === 'error') {
+                if (isFirstChunk) {
+                  isReceivingStream.value = true
+                  messages.value.push({ role: 'assistant', content: data.error })
+                  isFirstChunk = false
+                } else {
+                  messages.value[messages.value.length - 1].content += '\n\n' + data.error
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing stream data', e, line)
+            }
+          }
+        }
+      }
+    }
     
-    sessionId.value = res.session_id
-    messages.value.push({ role: 'assistant', content: res.answer })
-    scrollToBottom()
     await fetchHistory() // 刷新左侧会话列表
   } catch (error) {
-    messages.value.pop()
+    console.error('Chat error:', error)
+    messages.value.push({ role: 'assistant', content: '请求失败或超时，请检查网络后重试。' })
   } finally {
     loading.value = false
   }
@@ -90,7 +165,7 @@ const sendMessage = async () => {
           <BrandMark :size="24" class="llama-icon" />
           <h1 class="brand-name">招投标信息智能问答平台</h1>
         </div>
-        <button class="new-chat-btn" @click="startNewChat">
+        <button type="button" class="new-chat-btn" @click="startNewChat">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           新建会话
         </button>
@@ -116,7 +191,7 @@ const sendMessage = async () => {
           </div>
           <span class="user-name">{{ currentUser.username || '普通用户' }}</span>
         </div>
-        <button class="logout-btn" @click="logout">退出登录</button>
+        <button type="button" class="logout-btn" @click="logout">退出登录</button>
       </div>
     </aside>
 
@@ -132,13 +207,13 @@ const sendMessage = async () => {
           <p class="hero-subtitle">您可以提问关于企业信息、政策法规、招标数据及商品价格等任何问题。</p>
           
           <div class="suggestion-grid">
-            <button class="suggestion-pill" @click="query = '查询北京科技有限公司的工商信息'; sendMessage()">
+            <button type="button" class="suggestion-pill" @click="query = '查询北京科技有限公司的工商信息'; sendMessage()">
               查询企业信息
             </button>
-            <button class="suggestion-pill" @click="query = '最近有哪些高性能服务器的招标项目？'; sendMessage()">
+            <button type="button" class="suggestion-pill" @click="query = '最近有哪些高性能服务器的招标项目？'; sendMessage()">
               查找招标项目
             </button>
-            <button class="suggestion-pill" @click="query = '中华人民共和国招标投标法的核心内容是什么？'; sendMessage()">
+            <button type="button" class="suggestion-pill" @click="query = '中华人民共和国招标投标法的核心内容是什么？'; sendMessage()">
               检索政策法规
             </button>
           </div>
@@ -150,11 +225,13 @@ const sendMessage = async () => {
             <div class="message-avatar" v-if="msg.role === 'assistant'">
               <BrandMark :size="24" />
             </div>
-            <div class="message-content">
+            <div class="message-content" v-if="msg.role === 'user'">
               {{ msg.content }}
             </div>
+            <div class="message-content markdown-body" v-else v-html="renderMarkdown(msg.content)">
+            </div>
           </div>
-          <div v-if="loading" class="message-wrapper assistant">
+          <div v-if="loading && !isReceivingStream" class="message-wrapper assistant">
             <div class="message-avatar">
               <BrandMark :size="24" />
             </div>
@@ -173,10 +250,10 @@ const sendMessage = async () => {
             class="chat-input" 
             v-model="query" 
             placeholder="请输入问题…" 
-            @keyup.enter="sendMessage"
+            @keydown.enter.prevent="sendMessage"
             :disabled="loading"
           />
-          <button class="send-btn" @click="sendMessage" :disabled="loading || !query.trim()">
+          <button type="button" class="send-btn" @click="sendMessage" :disabled="loading || !query.trim()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"></line>
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -517,6 +594,108 @@ const sendMessage = async () => {
 .assistant .message-content {
   background-color: #ffffff;
   padding: 8px 0;
+}
+
+/* --- Markdown Styles --- */
+.markdown-body {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #24292f;
+}
+
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4) {
+  margin-top: 16px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-body :deep(h1) { font-size: 1.75em; }
+.markdown-body :deep(h2) { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #hsla(210,18%,87%,1); }
+.markdown-body :deep(h3) { font-size: 1.25em; }
+
+.markdown-body :deep(p) {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.markdown-body :deep(a) {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.markdown-body :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding-left: 2em;
+}
+
+.markdown-body :deep(li) {
+  margin-top: 0.15em;
+}
+
+.markdown-body :deep(code) {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(175,184,193,0.2);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+}
+
+.markdown-body :deep(pre) {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-body :deep(pre code) {
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  word-break: normal;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+}
+
+.markdown-body :deep(blockquote) {
+  margin: 0 0 16px 0;
+  padding: 0 1em;
+  color: #57606a;
+  border-left: 0.25em solid #d0d7de;
+}
+
+.markdown-body :deep(table) {
+  border-spacing: 0;
+  border-collapse: collapse;
+  margin-top: 0;
+  margin-bottom: 16px;
+  width: 100%;
+  overflow: auto;
+}
+
+.markdown-body :deep(table th),
+.markdown-body :deep(table td) {
+  padding: 6px 13px;
+  border: 1px solid #d0d7de;
+}
+
+.markdown-body :deep(table tr:nth-child(2n)) {
+  background-color: #f6f8fa;
 }
 
 /* --- Input Area --- */

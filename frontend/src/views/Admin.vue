@@ -2,8 +2,22 @@
 import { ref, onMounted, computed } from 'vue'
 import request from '../api/request'
 import BrandMark from '../components/BrandMark.vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 const currentUser = ref(JSON.parse(localStorage.getItem('admin_current_user') || '{}'))
+
+// Configure marked to use breaks for newlines
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
+
+const renderMarkdown = (text: string) => {
+  if (!text) return ''
+  const rawHtml = marked(text) as string
+  return DOMPurify.sanitize(rawHtml)
+}
 
 // Tabs
 const activeTab = ref('sessions') // 'sessions' | 'users' | 'data'
@@ -376,7 +390,8 @@ const formatDate = (dateStr: string) => {
                 <span class="msg-time">{{ formatDate(msg.time) }}</span>
                 <span class="role-name">用户</span>
               </div>
-              <div class="bubble-text">{{ msg.content }}</div>
+              <div class="bubble-text" v-if="msg.role === 'user'">{{ msg.content }}</div>
+              <div class="bubble-text markdown-body" v-else v-html="renderMarkdown(msg.content)"></div>
             </div>
             <div class="bubble-avatar" v-if="msg.role === 'user'">
               <div class="user-avatar-placeholder">U</div>
@@ -1031,5 +1046,107 @@ const formatDate = (dateStr: string) => {
   text-align: center;
   color: #a3a3a3;
   padding: 32px;
+}
+
+/* --- Markdown Styles --- */
+.markdown-body {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #24292f;
+}
+
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4) {
+  margin-top: 16px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-body :deep(h1) { font-size: 1.75em; }
+.markdown-body :deep(h2) { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #hsla(210,18%,87%,1); }
+.markdown-body :deep(h3) { font-size: 1.25em; }
+
+.markdown-body :deep(p) {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.markdown-body :deep(a) {
+  color: #0969da;
+  text-decoration: none;
+}
+
+.markdown-body :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding-left: 2em;
+}
+
+.markdown-body :deep(li) {
+  margin-top: 0.15em;
+}
+
+.markdown-body :deep(code) {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(175,184,193,0.2);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+}
+
+.markdown-body :deep(pre) {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-body :deep(pre code) {
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  word-break: normal;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+}
+
+.markdown-body :deep(blockquote) {
+  margin: 0 0 16px 0;
+  padding: 0 1em;
+  color: #57606a;
+  border-left: 0.25em solid #d0d7de;
+}
+
+.markdown-body :deep(table) {
+  border-spacing: 0;
+  border-collapse: collapse;
+  margin-top: 0;
+  margin-bottom: 16px;
+  width: 100%;
+  overflow: auto;
+}
+
+.markdown-body :deep(table th),
+.markdown-body :deep(table td) {
+  padding: 6px 13px;
+  border: 1px solid #d0d7de;
+}
+
+.markdown-body :deep(table tr:nth-child(2n)) {
+  background-color: #f6f8fa;
 }
 </style>
