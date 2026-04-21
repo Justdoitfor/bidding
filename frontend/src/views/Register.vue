@@ -34,7 +34,7 @@ const submit = async () => {
     })
     router.replace('/login')
   } catch (e: any) {
-    errorMsg.value = e?.response?.data?.detail || '注册失败'
+    errorMsg.value = e?.response?.data?.message || e?.response?.data?.detail || '注册失败'
   } finally {
     loading.value = false
   }

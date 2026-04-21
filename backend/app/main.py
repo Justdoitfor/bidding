@@ -1,10 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from app.api.routers import chat, document, auth, users
 from app.core.config import settings
 from app.services.rag_service import get_embedding_model
 from app.rag.vector_store import get_milvus_connection
 from pymilvus import Collection
+
+from app.core.middlewares import RequestLoggingMiddleware, RateLimitMiddleware
+from app.core.exceptions import http_exception_handler, validation_exception_handler, global_exception_handler
 
 app = FastAPI(
     title="招投标信息智能问答平台 API",
@@ -12,7 +18,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Setup CORS
+# Setup Exceptions
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, global_exception_handler)
+
+# Setup Middlewares
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,

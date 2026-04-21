@@ -33,7 +33,7 @@ const submit = async () => {
     localStorage.setItem('admin_current_user', JSON.stringify(res.user))
     router.replace('/admin')
   } catch (e: any) {
-    errorMsg.value = e?.response?.data?.detail || '登录失败'
+    errorMsg.value = e?.response?.data?.message || e?.response?.data?.detail || '登录失败'
   } finally {
     loading.value = false
   }

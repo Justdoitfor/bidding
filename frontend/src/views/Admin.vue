@@ -65,7 +65,7 @@ const handleFileUpload = async (event: Event) => {
     uploadMessage.value = res.message || '文件上传成功，正在后台处理中'
   } catch (error: any) {
     uploadStatus.value = 'error'
-    uploadMessage.value = error.response?.data?.detail || '文件上传失败'
+    uploadMessage.value = error.response?.data?.message || error.response?.data?.detail || '文件上传失败'
     console.error('上传失败', error)
   } finally {
     // Reset file input
