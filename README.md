@@ -2,14 +2,16 @@
 
 本项目是一个基于大语言模型（LLM）与检索增强生成（RAG）技术的智能问答系统，专注于为招标信息、企业信息、政策法规及商品价格等领域提供专业、精准的回答。系统采用了现代化的前后端分离架构，并结合向量检索与关系型数据查询技术，支持企业级的高效信息挖掘与分析。
 
+目前项目已完成 **Phase 1 (MVP)** 开发，具备完整的生产级可用特性。
+
 ## 🌟 核心功能特性
 
-- **智能问答界面 (Demo)**：包含前端对话系统，支持企业、招标、中标等数据的问答交互。
-- **后台管理系统 (Demo)**：支持查看用户问答历史记录，以及直接在前端上传CSV文件更新知识库。
-- **多模态文档解析**：支持 HTML、PDF、扫描件/图片的自动化解析与信息抽取。
-- **混合检索增强**：结合 Milvus 的向量语义检索与 MySQL 的结构化条件过滤，提供高精度查询结果。
-- **多模型支持**：无缝对接 Qwen（本地 vLLM 或 API）及讯飞星火（API）。
-- **极速依赖管理**：后端采用 `uv` 工具，实现 Python 虚拟环境与依赖的秒级构建。
+- **流式智能问答 (Streaming)**：采用 Server-Sent Events (SSE) 技术，大模型回答呈现打字机效果，大幅降低用户等待焦虑。
+- **极简极客 UI 设计**：灵感来源于 Ollama 的极简设计美学，纯灰度主题，内置专业级 Markdown 渲染与紧凑排版。
+- **生产级 API 网关**：内置全局异常拦截、滑动窗口限流（基于 Redis，120次/分钟）、全链路请求耗时日志追踪。
+- **混合检索增强**：结合 Milvus 的向量语义检索（BGE-M3）与 MySQL 的结构化元数据过滤，提供高精度查询结果。
+- **高性能数据入库引擎**：支持全量与增量导入，通过 `content_hash` 实现防重跳过，基于 MySQL 批量 Upsert 与 Milvus 后置索引构建，支持百万级数据的高效吞吐。
+- **多模型支持**：无缝对接 Qwen（通义千问）等兼容 OpenAI API 格式的大模型。
 
 ---
 
@@ -18,21 +20,20 @@
 ### 前端 (Frontend)
 - 框架：Vue 3 + Composition API
 - 语言：TypeScript
-- UI 组件库：Element Plus
-- 状态管理：Pinia
+- 渲染与解析：Marked + DOMPurify (Markdown 防注入渲染)
 - 构建工具：Vite
 
 ### 后端 (Backend)
 - 框架：FastAPI
-- 异步支持：Uvicorn, aiohttp, aiomysql
-- 包管理：uv
+- 网关组件：Starlette Middlewares (限流、日志、CORS)
+- 包管理：uv (极速依赖管理)
 
 ### AI 与数据引擎 (AI & Data)
-- 编排框架：LangChain / LlamaIndex
+- 编排框架：LangChain
 - 向量数据库：Milvus (PyMilvus)
 - Embedding 模型：BGE-M3 (BAAI/bge-m3)
-- 关系型数据库：MySQL 8.0 (Demo模式默认使用 SQLite 以便快速启动)
-- 缓存与消息：Redis
+- 关系型数据库：MySQL 8.0
+- 缓存与限流：Redis 7
 
 ### 部署与运维 (DevOps)
 - 容器化：Docker + Docker Compose
@@ -42,127 +43,95 @@
 ## 📁 目录结构
 
 ```text
-bidding-rag-system/
-├── data/               # 真实业务示例数据存放目录
-│   ├── company.csv      # 企业信息数据
-│   ├── law.csv          # 政策法规数据
-│   ├── product.csv      # 产品数据
-│   ├── zhaobiao.csv     # 招标公告数据
-│   └── zhongbiao.csv    # 中标公示数据
+bidding/
+├── data/               # 真实业务示例数据存放目录 (CSV 格式)
 ├── frontend/           # Vue 3 前端工程目录
-│   ├── src/            # 前端源码 (api, components, views, store 等)
-│   ├── package.json    # npm 依赖配置
-│   └── Dockerfile      # 前端构建镜像
 ├── backend/            # FastAPI 后端工程目录
-│   ├── app/            # 核心业务代码
-│   │   ├── api/        # 路由层 (RESTful API)
-│   │   ├── core/       # 核心配置 (Config, Security)
-│   │   ├── models/     # 数据库与数据传输模型
-│   │   ├── rag/        # RAG 核心组件 (Loader, Splitter, VectorStore)
-│   │   └── services/   # 业务逻辑服务
+│   ├── app/            # 核心业务代码 (API, Models, RAG, Services, Middlewares)
 │   ├── scripts/        # 运维与数据脚本
-│   │   ├── clear_data.py       # 一键清理所有业务数据表
-│   │   └── import_real_data.py # 真实业务数据导入（向量库与关系库）
-│   ├── pyproject.toml  # uv 依赖管理配置文件
-│   ├── init_db.py      # 数据库初始化结构与默认账号
-│   └── Dockerfile      # 后端运行镜像
-├── docs/               # 项目文档与设计规范
-│   └── architecture.md # 架构设计与开发规范详情
-├── docker-compose.yml  # 生产环境容器编排文件
-├── docker-compose.dev.yml # 开发环境容器编排文件
-└── README.md           # 项目说明文档
+│   │   ├── init_prod.sh        # 生产级一键初始化脚本 (推荐)
+│   │   ├── reset_db.py         # 清理数据库
+│   │   └── import_real_data.py # 高性能业务数据入库脚本
+│   └── pyproject.toml  # uv 依赖管理配置文件
+├── architecture/       # 架构设计与方案文档
+├── DESIGN.md           # UI/UX 设计规范说明
+└── docker-compose.dev.yml # 容器编排文件
 ```
 
 ---
 
-## 🚀 快速启动指南 (Docker 开发模式)
+## 🚀 快速启动与初始化
 
-由于本地环境配置可能因系统而异（特别是前端原生依赖构建问题），本项目**强烈推荐使用纯 Docker 方式**进行日常开发与调试，真正做到开箱即用。
+本项目强烈推荐使用纯 Docker 方式进行日常开发与部署，开箱即用。
 
-### 1. 环境准备
-- 安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- 确保 Docker 服务已启动。
-
-### 2. 首次启动开发环境
-
-第一次运行项目时，需要构建镜像并初始化数据库表和默认账号：
+### 1. 启动所有容器
+确保您已安装 Docker Desktop，然后在项目根目录执行：
 
 ```bash
-# 1. 构建并启动所有容器
+# 拉取最新代码并以后台模式构建启动所有容器
 docker-compose -f docker-compose.dev.yml up -d --build
-
-# 2. 等待后端启动完成后，执行数据库初始化脚本（创建表和默认 admin/demo 账号）
-docker-compose -f docker-compose.dev.yml exec backend uv run python init_db.py
 ```
+> **注意 (Windows 用户)**：如果您在 `.env` 或系统环境变量中设置了 `EXTERNAL_DATA_DIR` 为绝对路径（如 `E:\data`），请确保将其修改为 `/e/data` 格式，以避免 Docker Compose 卷挂载路径解析错误。若不设置，默认映射当前目录下的 `./data`。
 
-### 3. 后续启动开发环境
-
-日常开发时，只要没有修改 Dockerfile 或依赖库，直接启动即可（速度极快）：
+### 2. 执行生产级一键初始化
+容器启动后，执行以下命令即可完成：**数据库清理** -> **默认账号创建** -> **100条真实业务数据全量入库与向量索引构建**。
 
 ```bash
-docker-compose -f docker-compose.dev.yml up -d
+# 处理可能存在的 Windows/Linux 换行符问题并执行初始化脚本
+docker-compose -f docker-compose.dev.yml exec backend bash -c "sed -i 's/\r$//' scripts/init_prod.sh && bash scripts/init_prod.sh"
 ```
+*注：该脚本会自动读取映射到容器内 `/data` 目录下的 `company.csv`, `law.csv`, `product.csv`, `zhaobiao.csv`, `zhongbiao.csv` 文件。*
 
-如果修改了 `docker-compose.dev.yml` 的挂载卷（例如 `EXTERNAL_DATA_DIR` 指向的目录），需要重建后端容器使挂载生效：
+### 3. 服务访问
+初始化完成后，您可以通过以下地址访问系统：
 
-```bash
-docker-compose -f docker-compose.dev.yml up -d --force-recreate backend
-```
+- **智能问答前台**：`http://localhost:5173/login`
+- **管理员后台**：`http://localhost:5173/admin/login`
+- **Swagger API 文档**：`http://localhost:8000/docs`
 
-> **注意：** 该模式下，前端使用了 `Dockerfile.dev` 启动 Vite 热更新（HMR），且通过数据卷（Volumes）将宿主机代码实时映射到了容器内。
-> 当您在本地 IDE（如 PyCharm/VSCode）修改代码后，容器内的后端（FastAPI Reload）和前端（Vite HMR）都会**自动热更新**。
-
-### 4. 服务访问与使用
-启动完成后，您可以通过以下地址访问：
-- **普通用户登录与问答**：`http://localhost:5173/login`
-- **管理员后台（管理会话、用户与数据）**：`http://localhost:5173/admin/login`
-- **后端 Swagger API 接口文档**：`http://localhost:8000/docs`
-
-> 默认测试账号：
+> **默认测试账号**：
 > - 管理员：`root` / `admin`
 > - 普通用户：`user` / `user123`
 
 ---
 
-## 💾 如何导入外部真实数据
+## 💾 高性能海量数据入库指南
 
-系统自带的 `init_db.py` 仅用于初始化表结构和默认账号。如果您有真实的业务数据（企业信息、法律法规、招投标数据等），并且**数据存放在项目目录外部**，请按照以下步骤导入：
+当您需要导入百万级数据时，推荐使用细粒度参数控制内存和 CPU，避免机器 OOM。
 
-1. **准备外部数据文件**
-   支持 `.csv`, `.json`, `.xlsx` 格式。数据列名需参考 `数据库文档.md` 中的字段。
-
-2. **挂载外部目录并重启**
-   在 PowerShell 中，将 `EXTERNAL_DATA_DIR` 环境变量指向您真实的外部数据文件夹路径（例如 `E:\my_real_data`），并重新启动容器使其生效：
-   ```powershell
-   $env:EXTERNAL_DATA_DIR="E:\my_real_data"
-   docker-compose -f docker-compose.dev.yml up -d --force-recreate backend
-   ```
-
-3. **在容器内一键批量导入**
-   进入后端容器，执行通用导入脚本的目录扫描模式。脚本会**自动识别文件名**（如果文件名包含 `company`, `law`, `product`, `zhaobiao`, `zhongbiao` 则自动入库到对应表）：
-   ```powershell
-   # 一键扫描并导入该挂载目录（容器内固定路径为 /data）
-   docker-compose -f docker-compose.dev.yml exec backend uv run python scripts/import_real_data.py --dir /data
-   ```
-
-*注：您也可以在浏览器登录**管理员后台**，进入“数据入库”面板查看相关操作指引。*
-
----
-
-## 🚀 生产环境部署 (Docker 生产模式)
-
-当需要将系统打包发布到线上服务器时，请使用默认的 `docker-compose.yml`，该模式会对前端进行 Nginx 静态资源打包构建。
-
+**全量导入（首次导入，自动重建索引加速）**
 ```bash
-docker-compose up -d --build
+docker-compose -f docker-compose.dev.yml exec backend uv run python scripts/import_real_data.py \
+  --dir /data \
+  --mode full \
+  --milvus-rebuild-index \
+  --mysql-chunksize-company 50000 \
+  --mysql-chunksize-other 10000 \
+  --mysql-batch-size 10000 \
+  --milvus-batch-size 2000 \
+  --milvus-flush-every 50000
 ```
-启动后前端生产地址为：`http://localhost:3000`
+
+**增量导入（基于 content_hash 自动跳过未变更数据）**
+```bash
+docker-compose -f docker-compose.dev.yml exec backend uv run python scripts/import_real_data.py \
+  --dir /data \
+  --mode incremental \
+  --mysql-chunksize-company 50000 \
+  --mysql-chunksize-other 10000 \
+  --mysql-batch-size 10000 \
+  --milvus-batch-size 2000 \
+  --milvus-flush-every 20000
+```
+
+> **低配机器 (如 8C16G) 极限保命参数**：
+> 在命令前加上环境变量 `-e OMP_NUM_THREADS=4 -e MKL_NUM_THREADS=4` 限制 PyTorch 核心数，并将所有 `chunksize` 缩小到 `2000`，`batch-size` 缩小到 `200` 以极低内存模式运行。
 
 ---
 
 ## 👥 团队协作规范
 
-1. **分支管理**：基于 `develop` 分支检出 `feature/xxx` 进行功能开发。
-2. **依赖管理**：后端**必须**使用 `uv add <package>` 添加依赖，禁止直接使用 `pip`。前端使用 `npm install`。
+1. **分支管理**：所有的开发工作均在 `dev` 分支进行，确认无误后通过 PR 合并至 `main` 分支。
+2. **依赖管理**：后端必须使用 `uv add <package>` 添加依赖，禁止直接使用 `pip`。
 3. **接口契约**：前后端联调需以 FastAPI 生成的 Swagger 文档为准。
-4. **文档阅读**：详细的系统架构与数据组织策略请参考 `docs/architecture.md` 及 `data/数据库文档.md`。
+4. **架构了解**：详细的系统架构、RAG 查询链路与分阶段计划，请参考 `architecture/architecture.md`。
