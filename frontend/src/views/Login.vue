@@ -137,8 +137,7 @@ const submit = async () => {
 }
 
 .input:focus {
-  border-color: #d4d4d4;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+  border-color: #000000;
 }
 
 .error {

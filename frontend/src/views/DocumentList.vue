@@ -53,8 +53,8 @@ const route = useRoute()
 const router = useRouter()
 const fileInput = ref<HTMLInputElement | null>(null)
 
-const kbId = computed(() => route.query.kb_id as str || 'global')
-const kbName = computed(() => route.query.kb_name as str || '全局知识库')
+const kbId = computed(() => route.query.kb_id as string || 'global')
+const kbName = computed(() => route.query.kb_name as string || '全局知识库')
 
 const documents = ref<any[]>([])
 const loading = ref(true)
@@ -106,7 +106,7 @@ const handleFileUpload = async (event: Event) => {
   }
 }
 
-const getStatusText = (status: str) => {
+const getStatusText = (status: string) => {
   const map: Record<string, string> = {
     'uploaded': '已上传',
     'processing': '处理中',
@@ -129,7 +129,6 @@ onMounted(() => {
 
 <style scoped>
 .doc-container {
-  padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
 }

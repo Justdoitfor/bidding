@@ -93,7 +93,6 @@ onMounted(() => {
 
 <style scoped>
 .kb-container {
-  padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
 }
