@@ -2,13 +2,37 @@ from sqlalchemy import Column, String, Text, DECIMAL, JSON, Integer, DateTime, B
 from app.models.database import Base
 from datetime import datetime
 
+class Tenant(Base):
+    __tablename__ = "tenant"
+    id = Column(String(50), primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class User(Base):
     __tablename__ = "user"
     id = Column(String(50), primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
+    tenant_id = Column(String(50), index=True, nullable=True) # Phase 2 Multi-tenant
     is_admin = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class KnowledgeBase(Base):
+    __tablename__ = "knowledge_base"
+    id = Column(String(50), primary_key=True, index=True)
+    tenant_id = Column(String(50), index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Document(Base):
+    __tablename__ = "document"
+    id = Column(String(50), primary_key=True, index=True)
+    kb_id = Column(String(50), index=True)
+    filename = Column(String(255), nullable=False)
+    status = Column(String(50), default="processing") # uploaded, processing, success, failed
+    file_path = Column(String(500))
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Company(Base):

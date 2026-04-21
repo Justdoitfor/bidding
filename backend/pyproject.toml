@@ -29,6 +29,7 @@ dependencies = [
     "sentence-transformers>=5.4.0",
     "langchain-text-splitters>=1.1.1",
     "langchain-openai>=0.3.7",
+    "prometheus-fastapi-instrumentator>=7.0.0",
 ]
 
 [tool.uv]

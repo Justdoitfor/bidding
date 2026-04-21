@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.routers import chat, document, auth, users
+from app.api.routers import chat, document, auth, users, knowledge_base
 from app.core.config import settings
 from app.services.rag_service import get_embedding_model
 from app.rag.vector_store import get_milvus_connection
@@ -11,6 +11,7 @@ from pymilvus import Collection
 
 from app.core.middlewares import RequestLoggingMiddleware, RateLimitMiddleware
 from app.core.exceptions import http_exception_handler, validation_exception_handler, global_exception_handler
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(
     title="招投标信息智能问答平台 API",
@@ -39,6 +40,10 @@ app.include_router(chat, prefix="/api/v1/chat", tags=["Chat"])
 app.include_router(document, prefix="/api/v1/documents", tags=["Documents"])
 app.include_router(auth, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(users, prefix="/api/v1/users", tags=["Users"])
+app.include_router(knowledge_base.router, prefix="/api/v1/knowledge_bases", tags=["Knowledge Base"])
+
+# Setup Prometheus Monitoring
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 @app.on_event("startup")
 def warmup():

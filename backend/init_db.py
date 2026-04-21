@@ -1,5 +1,5 @@
 from app.models.database import Base, engine, SessionLocal
-from app.models.domain import Company, Law, Product, Zhaobiao, Zhongbiao, ChatSession, ChatMessage, User
+from app.models.domain import Company, Law, Product, Zhaobiao, Zhongbiao, ChatSession, ChatMessage, User, Tenant
 from app.core.security import get_password_hash
 import uuid
 
@@ -12,6 +12,16 @@ def generate_fake_data():
     try:
         print("Generating fake data for testing...")
 
+        print("Checking default tenant...")
+        tenant = db.query(Tenant).filter(Tenant.name == "Default Tenant").first()
+        if not tenant:
+            tenant_id = str(uuid.uuid4())
+            tenant = Tenant(id=tenant_id, name="Default Tenant")
+            db.add(tenant)
+            db.commit()
+        else:
+            tenant_id = tenant.id
+
         if not db.query(User).first():
             admin = User(
                 id="admin-uuid-0001",
@@ -19,6 +29,7 @@ def generate_fake_data():
                 password_hash=get_password_hash("admin"),
                 is_admin=True,
                 is_active=True,
+                tenant_id=tenant_id
             )
             demo = User(
                 id="demo-uuid-0002",
@@ -26,6 +37,7 @@ def generate_fake_data():
                 password_hash=get_password_hash("user123"),
                 is_admin=False,
                 is_active=True,
+                tenant_id=tenant_id
             )
             db.add_all([admin, demo])
             db.commit()

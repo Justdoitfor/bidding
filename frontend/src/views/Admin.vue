@@ -196,6 +196,7 @@ const formatDate = (dateStr: string) => {
           <h1 class="brand-name">招投标信息智能问答平台 - 管理中心</h1>
         </div>
         <div class="user-area">
+          <router-link to="/admin/kb" class="action-pill" style="margin-right: 12px; text-decoration: none; color: inherit;">知识库管理</router-link>
           <span class="username-badge">{{ currentUser.username || 'Admin' }}</span>
           <button class="action-pill" @click="logout">退出登录</button>
         </div>

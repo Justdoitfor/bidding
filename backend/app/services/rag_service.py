@@ -1,5 +1,5 @@
 from pymilvus import Collection
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 from app.rag.vector_store import get_milvus_connection
 from app.models.database import SessionLocal
 from app.models.domain import Company, Law, Product, Zhaobiao, Zhongbiao
@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 # Global model instance for efficiency
 _embed_model = None
+_reranker_model = None
 _collection_cache = {}
 
 def get_embedding_model():
@@ -19,6 +20,14 @@ def get_embedding_model():
         logger.info("Loading BAAI/bge-m3 embedding model for retrieval...")
         _embed_model = SentenceTransformer(settings.BGE_M3_MODEL_PATH)
     return _embed_model
+
+def get_reranker_model():
+    """Lazy load the Reranker model."""
+    global _reranker_model
+    if _reranker_model is None:
+        logger.info("Loading BAAI/bge-reranker-base model for retrieval reranking...")
+        _reranker_model = CrossEncoder("BAAI/bge-reranker-base")
+    return _reranker_model
 
 def get_milvus_collection(name: str) -> Collection:
     col = _collection_cache.get(name)
@@ -109,7 +118,7 @@ def retrieve_from_milvus(query: str, top_k: int = 5) -> list:
                     data=[query_vector],
                     anns_field=anns_field,
                     param=search_params,
-                    limit=top_k,
+                    limit=top_k * 3, # Retrieve more candidates for reranking
                     expr=None,
                     output_fields=output_fields
                 )
@@ -146,8 +155,19 @@ def retrieve_from_milvus(query: str, top_k: int = 5) -> list:
             except Exception as e:
                 logger.warning(f"Failed to search collection {col_name}: {e}")
                 
-        # Sort combined results by score descending and take top_k overall
-        all_results.sort(key=lambda x: x["score"], reverse=True)
+        # Reranking with CrossEncoder
+        if all_results:
+            reranker = get_reranker_model()
+            # Prepare pairs for reranking
+            sentence_pairs = [[query, item["text"]] for item in all_results]
+            rerank_scores = reranker.predict(sentence_pairs)
+            
+            # Update scores and sort
+            for i, item in enumerate(all_results):
+                item["rerank_score"] = float(rerank_scores[i])
+                
+            all_results.sort(key=lambda x: x["rerank_score"], reverse=True)
+            
         top_results = all_results[:top_k]
 
         hydrate_sources(top_results)
